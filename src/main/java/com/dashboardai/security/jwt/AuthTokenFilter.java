@@ -30,8 +30,16 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
+        
+        System.out.println("🔵 AuthTokenFilter: Request recibido");
+        System.out.println("🔵 AuthTokenFilter: URL: " + request.getRequestURL());
+        System.out.println("🔵 AuthTokenFilter: Method: " + request.getMethod());
+        System.out.println("🔵 AuthTokenFilter: Content-Type: " + request.getContentType());
+        
         try {
             String jwt = parseJwt(request);
+            System.out.println("🔵 AuthTokenFilter: JWT extraído: " + (jwt != null ? "Presente" : "Ausente"));
+            
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
 
@@ -43,11 +51,16 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                System.out.println("✅ AuthTokenFilter: Autenticación establecida para: " + username);
+            } else {
+                System.out.println("🔵 AuthTokenFilter: No hay JWT válido, continuando sin autenticación");
             }
         } catch (Exception e) {
+            System.err.println("❌ AuthTokenFilter: Error en autenticación: " + e.getMessage());
             logger.error("Cannot set user authentication: {}", e);
         }
 
+        System.out.println("🔵 AuthTokenFilter: Continuando con la cadena de filtros");
         filterChain.doFilter(request, response);
     }
 

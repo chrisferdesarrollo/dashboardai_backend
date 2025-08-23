@@ -47,7 +47,11 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-
+        
+        System.out.println("🔵 AuthController: Request recibido");
+        System.out.println("🔵 AuthController: Username: '" + loginRequest.getUsername() + "'");
+        System.out.println("🔵 AuthController: Password length: " + (loginRequest.getPassword() != null ? loginRequest.getPassword().length() : "null"));
+        
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
@@ -59,6 +63,8 @@ public class AuthController {
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
+        System.out.println("✅ AuthController: Login exitoso para usuario: " + userDetails.getUsername());
+        
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),
                 userDetails.getUsername(),
