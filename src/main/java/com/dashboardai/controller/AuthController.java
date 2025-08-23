@@ -1,9 +1,13 @@
 package com.dashboardai.controller;
 
+import com.dashboardai.dto.request.EmailVerificationRequest;
 import com.dashboardai.dto.request.LoginRequest;
+import com.dashboardai.dto.request.ResendVerificationRequest;
 import com.dashboardai.dto.request.SignupRequest;
+import com.dashboardai.dto.response.EmailVerificationResponse;
 import com.dashboardai.dto.response.JwtResponse;
 import com.dashboardai.dto.response.MessageResponse;
+import com.dashboardai.dto.response.SignupResponse;
 import com.dashboardai.model.ERole;
 import com.dashboardai.model.Role;
 import com.dashboardai.model.User;
@@ -11,8 +15,10 @@ import com.dashboardai.repository.RoleRepository;
 import com.dashboardai.repository.UserRepository;
 import com.dashboardai.security.jwt.JwtUtils;
 import com.dashboardai.security.services.UserDetailsImpl;
+import com.dashboardai.service.EmailVerificationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,12 +52,28 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    @Autowired
+    EmailVerificationService emailVerificationService;
+
+    @Value("${app.testing.skip-email-verification:false}")
+    private boolean skipEmailVerification;
+
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         
         System.out.println("🔵 AuthController: Request recibido");
         System.out.println("🔵 AuthController: Username: '" + loginRequest.getUsername() + "'");
         System.out.println("🔵 AuthController: Password length: " + (loginRequest.getPassword() != null ? loginRequest.getPassword().length() : "null"));
+        
+        // Verificar si el usuario existe y si su email está verificado
+        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (!user.getEmailVerified()) {
+                return ResponseEntity.status(403)
+                    .body(new MessageResponse("Debe verificar su email antes de iniciar sesión"));
+            }
+        }
         
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
@@ -120,8 +143,64 @@ public class AuthController {
         }
 
         user.setRoles(roles);
-        userRepository.save(user);
+        user.setEmailVerified(skipEmailVerification); // Verificado automáticamente si está en modo testing
+        User savedUser = userRepository.save(user);
 
-        return ResponseEntity.ok(new MessageResponse("Usuario registrado exitosamente!"));
+        if (skipEmailVerification) {
+            return ResponseEntity.ok(new SignupResponse(
+                "Usuario registrado exitosamente. [MODO TESTING - Email auto-verificado]", 
+                false, 
+                null
+            ));
+        }
+
+        // Crear y enviar token de verificación
+        try {
+            emailVerificationService.createVerificationToken(savedUser);
+            return ResponseEntity.ok(new SignupResponse(
+                "Usuario registrado exitosamente. Revisa tu email para verificar tu cuenta.", 
+                true, 
+                savedUser.getEmail()
+            ));
+        } catch (Exception e) {
+            // Si falla el envío del email, aún así permitir el registro
+            return ResponseEntity.ok(new SignupResponse(
+                "Usuario registrado exitosamente, pero hubo un problema al enviar el email de verificación. Contacta al administrador.", 
+                false, 
+                null
+            ));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody EmailVerificationRequest request) {
+        boolean verified = emailVerificationService.verifyEmail(request.getToken());
+        
+        if (verified) {
+            return ResponseEntity.ok(new EmailVerificationResponse(
+                "Email verificado exitosamente. Ya puedes iniciar sesión.", 
+                true
+            ));
+        } else {
+            return ResponseEntity.badRequest().body(new EmailVerificationResponse(
+                "Token de verificación inválido o expirado.", 
+                false
+            ));
+        }
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        boolean sent = emailVerificationService.resendVerificationEmail(request.getEmail());
+        
+        if (sent) {
+            return ResponseEntity.ok(new MessageResponse(
+                "Email de verificación reenviado exitosamente."
+            ));
+        } else {
+            return ResponseEntity.badRequest().body(new MessageResponse(
+                "No se pudo reenviar el email. Verifica que el email sea correcto y que no esté ya verificado."
+            ));
+        }
     }
 }
