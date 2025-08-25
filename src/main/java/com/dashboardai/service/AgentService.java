@@ -159,8 +159,8 @@ public class AgentService {
         try {
             long totalAgents = agentRepository.count();
             long activeAgents = agentRepository.countActiveAgents();
-            long whatsappAgents = agentRepository.countByPlatform(Agent.Platform.WHATSAPP);
-            long telegramAgents = agentRepository.countByPlatform(Agent.Platform.TELEGRAM);
+            long whatsappAgents = agentRepository.countByPlatform(Agent.Platform.whatsapp);
+            long telegramAgents = agentRepository.countByPlatform(Agent.Platform.telegram);
             
             return new AgentStatsResponse(totalAgents, activeAgents, whatsappAgents, telegramAgents);
         } catch (Exception e) {
