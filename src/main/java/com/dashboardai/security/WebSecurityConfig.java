@@ -67,6 +67,7 @@ public class WebSecurityConfig {
                 auth.requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/test/**").permitAll()
                     .requestMatchers("/api/debug/**").permitAll()
+                    .requestMatchers("/api/agents/**").permitAll()  // Permitir acceso a agentes sin autenticación
                     .anyRequest().authenticated()
             );
 
