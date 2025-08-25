@@ -35,7 +35,7 @@ public interface AgentRepository extends JpaRepository<Agent, UUID> {
     Long countByPlatform(@Param("platform") Agent.Platform platform);
     
     // Contar agentes activos
-    @Query("SELECT COUNT(a) FROM Agent a WHERE a.status = 'active'")
+    @Query("SELECT COUNT(a) FROM Agent a WHERE a.status = 'ACTIVE'")
     Long countActiveAgents();
     
     // Obtener agentes con más ejecuciones

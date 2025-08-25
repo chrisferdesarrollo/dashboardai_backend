@@ -47,7 +47,7 @@ public class AgentService {
             agent.setWorkflowId(request.getWorkflowId());
             agent.setPlatformConfig(request.getPlatformConfig());
             agent.setUserId(request.getUserId());
-            agent.setStatus(Agent.AgentStatus.active); // Por defecto activo
+            agent.setStatus(Agent.AgentStatus.ACTIVE); // Por defecto activo
             
             // Guardar en la base de datos
             Agent savedAgent = agentRepository.save(agent);
@@ -159,8 +159,8 @@ public class AgentService {
         try {
             long totalAgents = agentRepository.count();
             long activeAgents = agentRepository.countActiveAgents();
-            long whatsappAgents = agentRepository.countByPlatform(Agent.Platform.whatsapp);
-            long telegramAgents = agentRepository.countByPlatform(Agent.Platform.telegram);
+            long whatsappAgents = agentRepository.countByPlatform(Agent.Platform.WHATSAPP);
+            long telegramAgents = agentRepository.countByPlatform(Agent.Platform.TELEGRAM);
             
             return new AgentStatsResponse(totalAgents, activeAgents, whatsappAgents, telegramAgents);
         } catch (Exception e) {

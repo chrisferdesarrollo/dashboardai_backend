@@ -33,7 +33,7 @@ public class Agent {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    private AgentStatus status = AgentStatus.inactive;
+    private AgentStatus status = AgentStatus.INACTIVE;
     
     @Column(name = "prompt", nullable = false, columnDefinition = "TEXT")
     private String prompt;
@@ -41,7 +41,7 @@ public class Agent {
     @Column(name = "workflow_id", length = 255)
     private String workflowId;
     
-    @Column(name = "platform_config", columnDefinition = "TEXT")
+    @Column(name = "platform_config", columnDefinition = "jsonb")
     private String platformConfig;
     
     @Column(name = "total_executions")
@@ -61,11 +61,11 @@ public class Agent {
     
     // Enums
     public enum Platform {
-        whatsapp, telegram
+        WHATSAPP, TELEGRAM
     }
     
     public enum AgentStatus {
-        active, inactive, error
+        ACTIVE, INACTIVE, ERROR
     }
     
     // Constructors
