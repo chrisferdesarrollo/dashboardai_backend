@@ -68,6 +68,7 @@ public class WebSecurityConfig {
                     .requestMatchers("/api/test/**").permitAll()
                     .requestMatchers("/api/debug/**").permitAll()
                     .requestMatchers("/api/agents/**").permitAll()  // Permitir acceso a agentes sin autenticación
+                    .requestMatchers("/error").permitAll()  // Permitir acceso a página de error sin autenticación
                     .anyRequest().authenticated()
             );
 

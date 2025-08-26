@@ -33,7 +33,7 @@ public class Agent {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    private AgentStatus status = AgentStatus.INACTIVE;
+    private AgentStatus status = AgentStatus.inactive;
     
     @Column(name = "prompt", nullable = false, columnDefinition = "TEXT")
     private String prompt;
@@ -61,11 +61,11 @@ public class Agent {
     
     // Enums
     public enum Platform {
-        WHATSAPP, TELEGRAM
+        whatsapp, telegram
     }
     
     public enum AgentStatus {
-        ACTIVE, INACTIVE, ERROR
+        active, inactive, error
     }
     
     // Constructors

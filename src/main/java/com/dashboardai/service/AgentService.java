@@ -31,6 +31,7 @@ public class AgentService {
     public AgentResponse createAgent(CreateAgentRequest request) {
         try {
             logger.info("Creating new agent: {}", request.getName());
+            logger.info("Platform received: {}", request.getPlatform());
             
             // Verificar si ya existe un agente con ese nombre para el usuario
             if (request.getUserId() != null && 
@@ -47,7 +48,7 @@ public class AgentService {
             agent.setWorkflowId(request.getWorkflowId());
             agent.setPlatformConfig(request.getPlatformConfig());
             agent.setUserId(request.getUserId());
-            agent.setStatus(Agent.AgentStatus.ACTIVE); // Por defecto activo
+            agent.setStatus(Agent.AgentStatus.active); // Por defecto activo
             
             // Guardar en la base de datos
             Agent savedAgent = agentRepository.save(agent);
@@ -159,8 +160,8 @@ public class AgentService {
         try {
             long totalAgents = agentRepository.count();
             long activeAgents = agentRepository.countActiveAgents();
-            long whatsappAgents = agentRepository.countByPlatform(Agent.Platform.WHATSAPP);
-            long telegramAgents = agentRepository.countByPlatform(Agent.Platform.TELEGRAM);
+            long whatsappAgents = agentRepository.countByPlatform(Agent.Platform.whatsapp);
+            long telegramAgents = agentRepository.countByPlatform(Agent.Platform.telegram);
             
             return new AgentStatsResponse(totalAgents, activeAgents, whatsappAgents, telegramAgents);
         } catch (Exception e) {
