@@ -182,18 +182,18 @@ public class AgentController {
     // Clases auxiliares para las respuestas
     public static class CreateAgentResponseWrapper {
         private boolean success;
-        private AgentResponse agent;
+        private AgentResponse data; // Cambiar 'agent' por 'data' para consistencia con el frontend
         private String error;
         
-        public CreateAgentResponseWrapper(boolean success, AgentResponse agent, String error) {
+        public CreateAgentResponseWrapper(boolean success, AgentResponse data, String error) {
             this.success = success;
-            this.agent = agent;
+            this.data = data;
             this.error = error;
         }
         
         // Getters
         public boolean isSuccess() { return success; }
-        public AgentResponse getAgent() { return agent; }
+        public AgentResponse getData() { return data; } // Cambiar getter
         public String getError() { return error; }
     }
     
