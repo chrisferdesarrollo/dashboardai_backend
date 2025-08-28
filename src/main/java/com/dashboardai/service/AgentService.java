@@ -32,6 +32,8 @@ public class AgentService {
         try {
             logger.info("Creating new agent: {}", request.getName());
             logger.info("Platform received: {}", request.getPlatform());
+            logger.info("UserId received: {}", request.getUserId());
+            logger.info("Full request: {}", request);
             
             // Verificar si ya existe un agente con ese nombre para el usuario
             if (request.getUserId() != null && 

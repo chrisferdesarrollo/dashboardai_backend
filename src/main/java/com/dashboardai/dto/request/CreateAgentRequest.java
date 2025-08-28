@@ -92,4 +92,17 @@ public class CreateAgentRequest {
     public void setUserId(Long userId) {
         this.userId = userId;
     }
+    
+    @Override
+    public String toString() {
+        return "CreateAgentRequest{" +
+                "name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", platform=" + platform +
+                ", prompt='" + prompt + '\'' +
+                ", workflowId='" + workflowId + '\'' +
+                ", platformConfig='" + platformConfig + '\'' +
+                ", userId=" + userId +
+                '}';
+    }
 }
