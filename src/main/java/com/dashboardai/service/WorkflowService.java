@@ -229,6 +229,26 @@ public class WorkflowService {
         }
     }
     
+    /**
+     * Obtener todos los workflows de un usuario
+     */
+    @Transactional(readOnly = true)
+    public List<WorkflowResponse> getWorkflowsByUser(Long userId) {
+        try {
+            logger.info("Fetching workflows for user: {}", userId);
+            
+            List<Workflow> workflows = workflowRepository.findByUserIdAndNotDeleted(userId);
+            
+            return workflows.stream()
+                    .map(WorkflowResponse::new)
+                    .collect(Collectors.toList());
+            
+        } catch (Exception e) {
+            logger.error("Error fetching workflows for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener los workflows: " + e.getMessage());
+        }
+    }
+
     // Métodos auxiliares
     
     /**

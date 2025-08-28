@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+import java.util.UUID;
+
 public class CreateAgentRequest {
     
     @NotBlank(message = "El nombre del agente es requerido")
@@ -21,6 +24,11 @@ public class CreateAgentRequest {
     private String prompt;
     
     private String workflowId;
+    
+    // Nuevos campos para soporte de múltiples workflows
+    private List<String> workflowIds;
+    
+    private String primaryWorkflowId;
     
     private String platformConfig;
     
@@ -77,6 +85,22 @@ public class CreateAgentRequest {
         this.workflowId = workflowId;
     }
     
+    public List<String> getWorkflowIds() {
+        return workflowIds;
+    }
+    
+    public void setWorkflowIds(List<String> workflowIds) {
+        this.workflowIds = workflowIds;
+    }
+    
+    public String getPrimaryWorkflowId() {
+        return primaryWorkflowId;
+    }
+    
+    public void setPrimaryWorkflowId(String primaryWorkflowId) {
+        this.primaryWorkflowId = primaryWorkflowId;
+    }
+    
     public String getPlatformConfig() {
         return platformConfig;
     }
@@ -101,6 +125,8 @@ public class CreateAgentRequest {
                 ", platform=" + platform +
                 ", prompt='" + prompt + '\'' +
                 ", workflowId='" + workflowId + '\'' +
+                ", workflowIds=" + workflowIds +
+                ", primaryWorkflowId='" + primaryWorkflowId + '\'' +
                 ", platformConfig='" + platformConfig + '\'' +
                 ", userId=" + userId +
                 '}';
