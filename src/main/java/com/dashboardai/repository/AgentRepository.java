@@ -27,8 +27,8 @@ public interface AgentRepository extends JpaRepository<Agent, UUID> {
     // Buscar agentes por nombre (case insensitive)
     List<Agent> findByNameContainingIgnoreCase(String name);
     
-    // Buscar por workflow ID
-    Agent findByWorkflowId(String workflowId);
+    // Buscar por session name
+    Agent findBySessionName(String sessionName);
     
     // Contar agentes por plataforma
     @Query("SELECT COUNT(a) FROM Agent a WHERE a.platform = :platform")

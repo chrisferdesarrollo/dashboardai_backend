@@ -47,7 +47,7 @@ public class AgentService {
             agent.setDescription(request.getDescription());
             agent.setPlatform(request.getPlatform());
             agent.setPrompt(request.getPrompt());
-            agent.setWorkflowId(request.getWorkflowId());
+            agent.setSessionName(request.getSessionName());
             agent.setPlatformConfig(request.getPlatformConfig());
             agent.setUserId(request.getUserId());
             agent.setStatus(Agent.AgentStatus.active); // Por defecto activo

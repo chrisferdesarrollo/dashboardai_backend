@@ -38,8 +38,8 @@ public class Agent {
     @Column(name = "prompt", nullable = false, columnDefinition = "TEXT")
     private String prompt;
     
-    @Column(name = "workflow_id", length = 255)
-    private String workflowId;
+    @Column(name = "session_name", length = 255)
+    private String sessionName;
     
     @Column(name = "platform_config", columnDefinition = "jsonb")
     private String platformConfig;
@@ -141,12 +141,12 @@ public class Agent {
         this.prompt = prompt;
     }
     
-    public String getWorkflowId() {
-        return workflowId;
+    public String getSessionName() {
+        return sessionName;
     }
     
-    public void setWorkflowId(String workflowId) {
-        this.workflowId = workflowId;
+    public void setSessionName(String sessionName) {
+        this.sessionName = sessionName;
     }
     
     public String getPlatformConfig() {

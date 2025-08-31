@@ -13,7 +13,7 @@ public class AgentResponse {
     private Agent.Platform platform;
     private Agent.AgentStatus status;
     private String prompt;
-    private String workflowId;
+    private String sessionName;
     private String platformConfig;
     private Integer totalExecutions;
     private LocalDateTime lastExecutionAt;
@@ -31,7 +31,7 @@ public class AgentResponse {
         this.platform = agent.getPlatform();
         this.status = agent.getStatus();
         this.prompt = agent.getPrompt();
-        this.workflowId = agent.getWorkflowId();
+        this.sessionName = agent.getSessionName();
         this.platformConfig = agent.getPlatformConfig();
         this.totalExecutions = agent.getTotalExecutions();
         this.lastExecutionAt = agent.getLastExecutionAt();
@@ -89,12 +89,12 @@ public class AgentResponse {
         this.prompt = prompt;
     }
     
-    public String getWorkflowId() {
-        return workflowId;
+    public String getSessionName() {
+        return sessionName;
     }
     
-    public void setWorkflowId(String workflowId) {
-        this.workflowId = workflowId;
+    public void setSessionName(String sessionName) {
+        this.sessionName = sessionName;
     }
     
     public String getPlatformConfig() {
