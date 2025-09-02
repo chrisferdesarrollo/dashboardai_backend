@@ -12,8 +12,8 @@ import org.springframework.web.client.ResourceAccessException;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/n8n-proxy")
-@CrossOrigin(origins = "http://localhost:5173", maxAge = 3600)
+@RequestMapping("/api/n8n/proxy")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000"}, maxAge = 3600)
 @SuppressWarnings("rawtypes")
 public class N8nProxyController {
     
@@ -142,6 +142,66 @@ public class N8nProxyController {
             return ResponseEntity.ok(Map.of(
                 "success", false,
                 "error", "Error al crear sesión de WhatsApp: " + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * Proxy para eliminar sesión de WhatsApp
+     */
+    @PostMapping("/delete-whatsapp-session")
+    public ResponseEntity<?> deleteWhatsAppSession(@RequestBody Map<String, Object> payload) {
+        try {
+            logger.info("Deleting WhatsApp session via proxy: {}", payload.get("sessionName"));
+            
+            String url = N8N_BASE_URL + "/webhook/delete-whatsapp-session";
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("User-Agent", "DashboardAI-Backend/1.0");
+            headers.set("Access-Control-Allow-Origin", "*");
+            headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+            
+            logger.info("Sending delete request to n8n: {}", url);
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+            
+            logger.info("WhatsApp session deleted successfully: {}", response.getStatusCode());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Sesión eliminada correctamente",
+                "sessionName", payload.get("sessionName"),
+                "timestamp", java.time.Instant.now().toString(),
+                "data", response.getBody(),
+                "status", response.getStatusCode().value()
+            ));
+            
+        } catch (HttpClientErrorException e) {
+            logger.error("HTTP Client Error deleting WhatsApp session: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return ResponseEntity.ok(Map.of(
+                "success", false,
+                "error", "Error del cliente HTTP: " + e.getStatusCode() + " - " + e.getResponseBodyAsString()
+            ));
+        } catch (HttpServerErrorException e) {
+            logger.error("HTTP Server Error deleting WhatsApp session: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return ResponseEntity.ok(Map.of(
+                "success", false,
+                "error", "Error del servidor HTTP: " + e.getStatusCode() + " - " + e.getResponseBodyAsString()
+            ));
+        } catch (ResourceAccessException e) {
+            logger.error("Network error deleting WhatsApp session: {}", e.getMessage());
+            return ResponseEntity.ok(Map.of(
+                "success", false,
+                "error", "Error de red: " + e.getMessage()
+            ));
+        } catch (Exception e) {
+            logger.error("Unexpected error deleting WhatsApp session: {}", e.getMessage(), e);
+            return ResponseEntity.ok(Map.of(
+                "success", false,
+                "error", "Error inesperado al eliminar sesión de WhatsApp: " + e.getMessage()
             ));
         }
     }
