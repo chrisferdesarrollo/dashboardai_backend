@@ -2,6 +2,7 @@ package com.dashboardai.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -18,12 +19,22 @@ import java.util.Map;
 public class N8nProxyController {
     
     private static final Logger logger = LoggerFactory.getLogger(N8nProxyController.class);
-    private static final String N8N_BASE_URL = "https://n8n-n8n.hrxtio.easypanel.host";
+    
+    @Value("${n8n.webhook.url:http://localhost:5678/webhook}")
+    private String n8nWebhookUrl;
     
     private final RestTemplate restTemplate;
     
     public N8nProxyController() {
         this.restTemplate = new RestTemplate();
+    }
+    
+    /**
+     * Obtiene la URL base de n8n desde la configuración
+     */
+    private String getN8nBaseUrl() {
+        // Remover /webhook del final si está presente para obtener la URL base
+        return n8nWebhookUrl.replace("/webhook", "");
     }
     
     /**
@@ -34,7 +45,7 @@ public class N8nProxyController {
         try {
             logger.info("Testing n8n connection via proxy");
             
-            String url = N8N_BASE_URL + "/webhook/test-connection";
+            String url = getN8nBaseUrl() + "/test-connection";
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -82,7 +93,7 @@ public class N8nProxyController {
         try {
             logger.info("Getting workflows from n8n via proxy");
             
-            String url = N8N_BASE_URL + "/api/v1/workflows";
+            String url = getN8nBaseUrl() + "/api/v1/workflows";
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -119,7 +130,7 @@ public class N8nProxyController {
         try {
             logger.info("Creating WhatsApp session via proxy");
             
-            String url = N8N_BASE_URL + "/webhook/create-whatsapp-session";
+            String url = n8nWebhookUrl + "/create-whatsapp-session";
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -154,7 +165,7 @@ public class N8nProxyController {
         try {
             logger.info("Deleting WhatsApp session via proxy: {}", payload.get("sessionName"));
             
-            String url = N8N_BASE_URL + "/webhook/delete-whatsapp-session";
+            String url = n8nWebhookUrl + "/delete-whatsapp-session";
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

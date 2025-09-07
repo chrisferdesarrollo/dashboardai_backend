@@ -70,6 +70,7 @@ public class WebSecurityConfig {
                     .requestMatchers("/api/agents/**").permitAll()  // Permitir acceso a agentes sin autenticación
                     .requestMatchers("/api/workflows/**").permitAll()  // Permitir acceso a workflows sin autenticación (temporal)
                     .requestMatchers("/api/n8n/proxy/**").permitAll()  // Permitir acceso al proxy de n8n sin autenticación
+                    .requestMatchers("/api/conversation-logs/**").permitAll()  // Permitir acceso a conversation logs sin autenticación
                     .requestMatchers("/error").permitAll()  // Permitir acceso a página de error sin autenticación
                     .anyRequest().authenticated()
             );
