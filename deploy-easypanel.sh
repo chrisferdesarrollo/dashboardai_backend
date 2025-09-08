@@ -51,8 +51,8 @@ check_easypanel() {
     if docker ps | grep -q postgres; then
         print_success "PostgreSQL found in EasyPanel"
         POSTGRES_CONTAINER=$(docker ps | grep postgres | awk '{print $1}')
-        POSTGRES_IP=$(docker inspect $POSTGRES_CONTAINER | grep '"IPAddress"' | head -1 | awk -F'"' '{print $4}')
-        print_info "PostgreSQL IP: $POSTGRES_IP"
+        POSTGRES_NAME=$(docker inspect $POSTGRES_CONTAINER --format='{{.Name}}' | sed 's/\///')
+        print_info "PostgreSQL Container: $POSTGRES_NAME"
     else
         print_error "PostgreSQL not found - please check EasyPanel"
         exit 1
@@ -72,16 +72,27 @@ setup_database() {
     
     POSTGRES_CONTAINER=$(docker ps | grep postgres | awk '{print $1}')
     
-    # Create database if not exists
-    docker exec $POSTGRES_CONTAINER psql -U postgres -c "CREATE DATABASE dashboard_ai_db;" 2>/dev/null || print_info "Database already exists"
+    # Check if database connection works with existing user
+    if docker exec $POSTGRES_CONTAINER psql -U desarrolladorchristian -d dashboard_ai_db -c "SELECT 1;" &>/dev/null; then
+        print_success "Database connection verified - dashboard_ai_db exists and user has access"
+        return 0
+    fi
     
-    # Create user if not exists
-    docker exec $POSTGRES_CONTAINER psql -U postgres -c "CREATE USER desarrolladorchristian WITH PASSWORD 'Dashboard_Agents_2025!';" 2>/dev/null || print_info "User already exists"
-    
-    # Grant privileges
-    docker exec $POSTGRES_CONTAINER psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE dashboard_ai_db TO desarrolladorchristian;"
-    
-    print_success "Database setup completed"
+    # Try to connect as postgres user (fallback)
+    if docker exec $POSTGRES_CONTAINER psql -U postgres -c "SELECT 1;" &>/dev/null; then
+        # Create database if not exists
+        docker exec $POSTGRES_CONTAINER psql -U postgres -c "CREATE DATABASE dashboard_ai_db;" 2>/dev/null || print_info "Database already exists"
+        
+        # Create user if not exists
+        docker exec $POSTGRES_CONTAINER psql -U postgres -c "CREATE USER desarrolladorchristian WITH PASSWORD 'Dashboard_Agents_2025!';" 2>/dev/null || print_info "User already exists"
+        
+        # Grant privileges
+        docker exec $POSTGRES_CONTAINER psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE dashboard_ai_db TO desarrolladorchristian;"
+        
+        print_success "Database setup completed"
+    else
+        print_warning "Cannot connect to PostgreSQL as postgres user - assuming database is already configured"
+    fi
 }
 
 # Create necessary directories
@@ -120,12 +131,14 @@ update_db_config() {
     print_info "Updating database configuration..."
     
     POSTGRES_CONTAINER=$(docker ps | grep postgres | awk '{print $1}')
-    POSTGRES_IP=$(docker inspect $POSTGRES_CONTAINER | grep '"IPAddress"' | head -1 | awk -F'"' '{print $4}')
     
-    # Update docker-compose file with correct PostgreSQL IP
-    sed -i "s/host.docker.internal:5432/$POSTGRES_IP:5432/g" $DEPLOY_DIR/$COMPOSE_FILE
+    # Get container name instead of IP for better networking
+    POSTGRES_NAME=$(docker inspect $POSTGRES_CONTAINER --format='{{.Name}}' | sed 's/\///')
     
-    print_success "Database configuration updated to use IP: $POSTGRES_IP"
+    print_info "Using PostgreSQL container: $POSTGRES_NAME"
+    
+    # No need to modify docker-compose as it should use container names for networking
+    print_success "Database configuration will use container networking"
 }
 
 # Build and deploy containers
