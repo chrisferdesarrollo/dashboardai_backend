@@ -42,6 +42,7 @@ public class Agent {
     private String sessionName;
     
     @Column(name = "platform_config", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String platformConfig;
     
     @Column(name = "total_executions")

@@ -48,7 +48,14 @@ public class AgentService {
             agent.setPlatform(request.getPlatform());
             agent.setPrompt(request.getPrompt());
             agent.setSessionName(request.getSessionName());
-            agent.setPlatformConfig(request.getPlatformConfig());
+            
+            // Procesar platformConfig - asegurar que es un JSON válido
+            if (request.getPlatformConfig() != null && !request.getPlatformConfig().isEmpty()) {
+                agent.setPlatformConfig(request.getPlatformConfig());
+            } else {
+                agent.setPlatformConfig("{}"); // JSON vacío por defecto
+            }
+            
             agent.setUserId(request.getUserId());
             agent.setStatus(Agent.AgentStatus.active); // Por defecto activo
             
