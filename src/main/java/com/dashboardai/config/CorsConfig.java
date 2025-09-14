@@ -15,13 +15,15 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Permitir orígenes específicos (en desarrollo)
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        // Permitir orígenes específicos (en desarrollo y producción)
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000", 
             "http://127.0.0.1:3000",
             "http://localhost:8080",
-            "http://148.230.92.75:3000"
+            "http://148.230.92.75:3000",
+            "https://148.230.92.75:3000",
+            "http://148.230.92.75",
+            "https://148.230.92.75"
         ));
         
         // Permitir métodos HTTP específicos
