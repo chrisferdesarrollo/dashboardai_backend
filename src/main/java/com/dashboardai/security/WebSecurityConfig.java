@@ -67,6 +67,7 @@ public class WebSecurityConfig {
                 auth.requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/test/**").permitAll()
                     .requestMatchers("/api/debug/**").permitAll()
+                    .requestMatchers("/actuator/**").permitAll()  // Permitir acceso a actuator para health checks
                     .requestMatchers("/api/agents/**").permitAll()  // Permitir acceso a agentes sin autenticación
                     .requestMatchers("/api/workflows/**").permitAll()  // Permitir acceso a workflows sin autenticación (temporal)
                     .requestMatchers("/api/n8n/proxy/**").permitAll()  // Permitir acceso al proxy de n8n sin autenticación
