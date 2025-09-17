@@ -14,7 +14,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/n8n/proxy")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://148.230.92.75:3000"}, maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "https://topias.app"}, maxAge = 3600)
 @SuppressWarnings("rawtypes")
 public class N8nProxyController {
     

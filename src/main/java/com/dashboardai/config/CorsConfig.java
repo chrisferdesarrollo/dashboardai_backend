@@ -20,10 +20,8 @@ public class CorsConfig {
             "http://localhost:3000", 
             "http://127.0.0.1:3000",
             "http://localhost:8080",
-            "http://148.230.92.75:3000",
-            "https://148.230.92.75:3000",
-            "http://148.230.92.75",
-            "https://148.230.92.75"
+            "https://topias.app",
+            "http://topias.app"
         ));
         
         // Permitir métodos HTTP específicos

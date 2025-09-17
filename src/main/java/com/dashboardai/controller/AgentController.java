@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/agents")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "http://148.230.92.75:3000"}, maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "https://topias.app"}, maxAge = 3600)
 public class AgentController {
     
     private static final Logger logger = LoggerFactory.getLogger(AgentController.class);
