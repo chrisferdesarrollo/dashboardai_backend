@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/conversation-logs")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5173", "http://localhost:5678", "http://host.docker.internal:5678", "http://192.168.128.6:5678", "https://ba15be3b1392.ngrok-free.app", "https://*.ngrok-free.app"}, maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5173", "http://localhost:8443", "http://host.docker.internal:8443", "http://192.168.128.6:8443", "https://ba15be3b1392.ngrok-free.app", "https://*.ngrok-free.app"}, maxAge = 3600)
 public class ConversationLogController {
     
     private static final Logger logger = LoggerFactory.getLogger(ConversationLogController.class);

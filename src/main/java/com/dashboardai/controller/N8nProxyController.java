@@ -20,7 +20,7 @@ public class N8nProxyController {
     
     private static final Logger logger = LoggerFactory.getLogger(N8nProxyController.class);
     
-    @Value("${n8n.webhook.url:http://localhost:5678/webhook}")
+    @Value("${n8n.webhook.url:http://localhost:8443/webhook}")
     private String n8nWebhookUrl;
     
     private final RestTemplate restTemplate;

@@ -19,15 +19,9 @@ public class CorsConfig {
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000", 
             "http://127.0.0.1:3000",
-            "http://localhost:8443", 
-            "http://127.0.0.1:8443",
-            "https://localhost:8443", 
-            "https://127.0.0.1:8443",
             "http://localhost:8080",
             "http://148.230.92.75:3000",
             "https://148.230.92.75:3000",
-            "http://148.230.92.75:8443",
-            "https://148.230.92.75:8443",
             "http://148.230.92.75",
             "https://148.230.92.75"
         ));
