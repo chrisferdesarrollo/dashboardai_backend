@@ -7,7 +7,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import com.dashboardai.entity.Agent;
 import com.dashboardai.entity.N8nConfiguration;
 import com.dashboardai.entity.Workflow;
 import com.dashboardai.repository.N8nConfigurationRepository;
@@ -277,14 +276,14 @@ public class N8nIntegrationService {
     /**
      * Despliega workflows de un agente en n8n
      */
-    public boolean deployAgentWorkflows(Agent agent, List<String> workflowIds) {
+    public boolean deployAgentWorkflows(String agentId, Long userId, List<String> workflowIds) {
         try {
-            logger.info("Deploying workflows for agent: {} with workflows: {}", agent.getId(), workflowIds);
+            logger.info("Deploying workflows for agent: {} with workflows: {}", agentId, workflowIds);
             
             // Obtener configuración de n8n del usuario del agente
-            Optional<N8nConfiguration> config = n8nConfigurationRepository.findActiveByUserId(agent.getUserId());
+            Optional<N8nConfiguration> config = n8nConfigurationRepository.findActiveByUserId(userId);
             if (config.isEmpty()) {
-                logger.error("No N8n configuration found for user: {}", agent.getUserId());
+                logger.error("No N8n configuration found for user: {}", userId);
                 return false;
             }
             
@@ -324,7 +323,7 @@ public class N8nIntegrationService {
                     );
                     
                     if (activateResponse.getStatusCode() == HttpStatus.OK) {
-                        logger.info("Successfully activated workflow {} for agent {}", workflowId, agent.getId());
+                        logger.info("Successfully activated workflow {} for agent {}", workflowId, agentId);
                         
                         // Actualizar estado en base de datos local
                         workflow.setActive(true);
@@ -333,27 +332,27 @@ public class N8nIntegrationService {
                         
                     } else {
                         logger.error("Failed to activate workflow {} for agent {}: {}", 
-                                   workflowId, agent.getId(), activateResponse.getStatusCode());
+                                   workflowId, agentId, activateResponse.getStatusCode());
                         allSuccessful = false;
                     }
                     
                 } catch (Exception e) {
                     logger.error("Error deploying workflow {} for agent {}: {}", 
-                               workflowId, agent.getId(), e.getMessage());
+                               workflowId, agentId, e.getMessage());
                     allSuccessful = false;
                 }
             }
             
             if (allSuccessful) {
-                logger.info("All workflows deployed successfully for agent: {}", agent.getId());
+                logger.info("All workflows deployed successfully for agent: {}", agentId);
             } else {
-                logger.warn("Some workflows failed to deploy for agent: {}", agent.getId());
+                logger.warn("Some workflows failed to deploy for agent: {}", agentId);
             }
             
             return allSuccessful;
             
         } catch (Exception e) {
-            logger.error("Error deploying workflows for agent {}: {}", agent.getId(), e.getMessage());
+            logger.error("Error deploying workflows for agent {}: {}", agentId, e.getMessage());
             return false;
         }
     }

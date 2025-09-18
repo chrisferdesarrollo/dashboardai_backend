@@ -123,6 +123,28 @@ public class AgentService {
     }
     
     /**
+     * Obtener un agente por sessionName
+     * Útil para workflows de n8n que necesitan obtener información del agente
+     */
+    @Transactional(readOnly = true)
+    public AgentResponse getAgentBySessionName(String sessionName) {
+        try {
+            logger.info("Searching for agent with sessionName: {}", sessionName);
+            Agent agent = agentRepository.findBySessionName(sessionName);
+            if (agent != null) {
+                logger.info("Found agent: {} (ID: {})", agent.getName(), agent.getId());
+                return new AgentResponse(agent);
+            } else {
+                logger.warn("No agent found with sessionName: {}", sessionName);
+                throw new RuntimeException("Agente no encontrado con sessionName: " + sessionName);
+            }
+        } catch (Exception e) {
+            logger.error("Error fetching agent by sessionName {}: {}", sessionName, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener el agente por sessionName");
+        }
+    }
+    
+    /**
      * Actualizar el estado de un agente
      */
     public AgentResponse updateAgentStatus(UUID agentId, Agent.AgentStatus status) {

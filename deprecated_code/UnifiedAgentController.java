@@ -5,9 +5,7 @@ import com.dashboardai.dto.request.CreateWhatsAppAgentRequest;
 import com.dashboardai.dto.request.CreateTelegramAgentRequest;
 import com.dashboardai.dto.response.UnifiedAgentResponse;
 import com.dashboardai.dto.response.MessageResponse;
-import com.dashboardai.model.AgentPlatform;
-import com.dashboardai.entity.AgentWhatsApp;
-import com.dashboardai.entity.AgentTelegram;
+import com.dashboardai.entity.Agent;
 import com.dashboardai.service.AgentWhatsAppService;
 import com.dashboardai.service.AgentTelegramService;
 import jakarta.validation.Valid;
@@ -22,11 +20,11 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/agents")
+@RequestMapping("/api/agents/unified")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:3000", "https://topias.app"}, maxAge = 3600)
-public class AgentController {
+public class UnifiedAgentController {
     
-    private static final Logger logger = LoggerFactory.getLogger(AgentController.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnifiedAgentController.class);
     
     @Autowired
     private AgentWhatsAppService agentWhatsAppService;
@@ -36,14 +34,13 @@ public class AgentController {
     
     /**
      * Crear un nuevo agente (WhatsApp o Telegram basado en la plataforma)
-     * Mantiene compatibilidad con frontend existente
      */
     @PostMapping
     public ResponseEntity<?> createAgent(@Valid @RequestBody CreateAgentRequest request) {
         try {
-            logger.info("POST /api/agents - Creating agent: {} for platform: {}", request.getName(), request.getPlatform());
+            logger.info("POST /api/agents/unified - Creating agent: {} for platform: {}", request.getName(), request.getPlatform());
             
-            if (request.getPlatform() == AgentPlatform.whatsapp) {
+            if (request.getPlatform() == Agent.Platform.whatsapp) {
                 // Convertir a CreateWhatsAppAgentRequest
                 CreateWhatsAppAgentRequest whatsappRequest = new CreateWhatsAppAgentRequest();
                 whatsappRequest.setName(request.getName());
@@ -58,7 +55,7 @@ public class AgentController {
                 var response = agentWhatsAppService.createAgent(whatsappRequest);
                 return ResponseEntity.ok(new CreateAgentResponseWrapper(true, new UnifiedAgentResponse(response, "whatsapp"), null));
                 
-            } else if (request.getPlatform() == AgentPlatform.telegram) {
+            } else if (request.getPlatform() == Agent.Platform.telegram) {
                 // Convertir a CreateTelegramAgentRequest
                 CreateTelegramAgentRequest telegramRequest = new CreateTelegramAgentRequest();
                 telegramRequest.setName(request.getName());
@@ -78,19 +75,19 @@ public class AgentController {
             }
             
         } catch (Exception e) {
-            logger.error("Error creating agent: {}", e.getMessage(), e);
+            logger.error("Error creating unified agent: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(new CreateAgentResponseWrapper(false, null, e.getMessage()));
         }
     }
     
     /**
-     * Obtener todos los agentes (WhatsApp y Telegram combinados)
+     * Obtener todos los agentes (WhatsApp y Telegram juntos)
      */
     @GetMapping
     public ResponseEntity<?> getAllAgents() {
         try {
-            logger.info("GET /api/agents - Fetching all agents");
+            logger.info("GET /api/agents/unified - Fetching all agents");
             
             List<UnifiedAgentResponse> allAgents = new ArrayList<>();
             
@@ -105,7 +102,7 @@ public class AgentController {
             return ResponseEntity.ok(new GetAgentsResponseWrapper(true, allAgents, null));
             
         } catch (Exception e) {
-            logger.error("Error fetching agents: {}", e.getMessage(), e);
+            logger.error("Error fetching all unified agents: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(new GetAgentsResponseWrapper(false, null, e.getMessage()));
         }
@@ -117,7 +114,7 @@ public class AgentController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getAgentsByUser(@PathVariable Long userId) {
         try {
-            logger.info("GET /api/agents/user/{} - Fetching agents for user", userId);
+            logger.info("GET /api/agents/unified/user/{} - Fetching agents for user", userId);
             
             List<UnifiedAgentResponse> allAgents = new ArrayList<>();
             
@@ -132,68 +129,13 @@ public class AgentController {
             return ResponseEntity.ok(new GetAgentsResponseWrapper(true, allAgents, null));
             
         } catch (Exception e) {
-            logger.error("Error fetching agents for user {}: {}", userId, e.getMessage(), e);
+            logger.error("Error fetching unified agents for user {}: {}", userId, e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(new GetAgentsResponseWrapper(false, null, e.getMessage()));
         }
     }
     
-    /**
-     * Obtener un agente por sessionName (busca en ambas tablas)
-     */
-    @GetMapping("/session/{sessionName}")
-    public ResponseEntity<?> getAgentBySessionName(@PathVariable String sessionName) {
-        try {
-            logger.info("GET /api/agents/session/{} - Fetching agent by sessionName", sessionName);
-            
-            // Primero buscar en WhatsApp agents
-            try {
-                var whatsappAgent = agentWhatsAppService.getAgentBySessionName(sessionName);
-                return ResponseEntity.ok(new CreateAgentResponseWrapper(true, new UnifiedAgentResponse(whatsappAgent, "whatsapp"), null));
-            } catch (Exception e) {
-                logger.debug("Agent not found in WhatsApp table, trying Telegram");
-            }
-            
-            // Si no se encuentra en WhatsApp, buscar en Telegram usando botName
-            try {
-                var telegramAgent = agentTelegramService.getAgentByBotName(sessionName);
-                return ResponseEntity.ok(new CreateAgentResponseWrapper(true, new UnifiedAgentResponse(telegramAgent, "telegram"), null));
-            } catch (Exception e) {
-                logger.debug("Agent not found in Telegram table either");
-            }
-            
-            throw new RuntimeException("Agente no encontrado con sessionName: " + sessionName);
-            
-        } catch (Exception e) {
-            logger.error("Error fetching agent by sessionName {}: {}", sessionName, e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(new CreateAgentResponseWrapper(false, null, e.getMessage()));
-        }
-    }
-    
-    /**
-     * Obtener estadísticas combinadas de agentes
-     */
-    @GetMapping("/stats")
-    public ResponseEntity<?> getAgentStats() {
-        try {
-            logger.info("GET /api/agents/stats - Fetching agent statistics");
-            
-            Long whatsappActive = agentWhatsAppService.countActiveAgents();
-            Long telegramActive = agentTelegramService.countActiveAgents();
-            
-            var stats = new CombinedAgentStats(whatsappActive, telegramActive);
-            
-            return ResponseEntity.ok(stats);
-            
-        } catch (Exception e) {
-            logger.error("Error fetching agent stats: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Error al obtener estadísticas: " + e.getMessage()));
-        }
-    }
-    
-    // Clases auxiliares para las respuestas
+    // Clases internas para wrappers de respuesta
     public static class CreateAgentResponseWrapper {
         private boolean success;
         private UnifiedAgentResponse data;
@@ -213,49 +155,18 @@ public class AgentController {
     
     public static class GetAgentsResponseWrapper {
         private boolean success;
-        private List<UnifiedAgentResponse> agents;
+        private List<UnifiedAgentResponse> data;
         private String message;
         
-        public GetAgentsResponseWrapper(boolean success, List<UnifiedAgentResponse> agents, String message) {
+        public GetAgentsResponseWrapper(boolean success, List<UnifiedAgentResponse> data, String message) {
             this.success = success;
-            this.agents = agents;
+            this.data = data;
             this.message = message;
         }
         
         // Getters
         public boolean isSuccess() { return success; }
-        public List<UnifiedAgentResponse> getAgents() { return agents; }
+        public List<UnifiedAgentResponse> getData() { return data; }
         public String getMessage() { return message; }
-    }
-    
-    public static class UpdateStatusRequest {
-        private AgentWhatsApp.AgentStatus whatsappStatus;
-        private AgentTelegram.AgentStatus telegramStatus;
-        
-        public AgentWhatsApp.AgentStatus getWhatsappStatus() { return whatsappStatus; }
-        public void setWhatsappStatus(AgentWhatsApp.AgentStatus status) { this.whatsappStatus = status; }
-        
-        public AgentTelegram.AgentStatus getTelegramStatus() { return telegramStatus; }
-        public void setTelegramStatus(AgentTelegram.AgentStatus status) { this.telegramStatus = status; }
-    }
-    
-    public static class CombinedAgentStats {
-        private long totalAgents;
-        private long activeAgents;
-        private long whatsappAgents;
-        private long telegramAgents;
-        
-        public CombinedAgentStats(Long whatsappActive, Long telegramActive) {
-            this.whatsappAgents = whatsappActive != null ? whatsappActive : 0;
-            this.telegramAgents = telegramActive != null ? telegramActive : 0;
-            this.activeAgents = this.whatsappAgents + this.telegramAgents;
-            this.totalAgents = this.activeAgents; // Por simplicidad, asumimos que activos = total
-        }
-        
-        // Getters
-        public long getTotalAgents() { return totalAgents; }
-        public long getActiveAgents() { return activeAgents; }
-        public long getWhatsappAgents() { return whatsappAgents; }
-        public long getTelegramAgents() { return telegramAgents; }
     }
 }

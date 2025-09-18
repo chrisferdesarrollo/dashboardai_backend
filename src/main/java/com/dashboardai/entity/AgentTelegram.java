@@ -8,9 +8,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "agents")
+@Table(name = "agents_telegram")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Agent {
+public class AgentTelegram {
     
     @Id
     @GeneratedValue(generator = "UUID")
@@ -28,18 +28,14 @@ public class Agent {
     private String description;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "platform", nullable = false, length = 50)
-    private Platform platform;
-    
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private AgentStatus status = AgentStatus.inactive;
     
     @Column(name = "prompt", nullable = false, columnDefinition = "TEXT")
     private String prompt;
     
-    @Column(name = "session_name", length = 255)
-    private String sessionName;
+    @Column(name = "bot_name", length = 255)
+    private String botName;
     
     @Column(name = "platform_config", columnDefinition = "jsonb")
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
@@ -61,21 +57,16 @@ public class Agent {
     private LocalDateTime updatedAt;
     
     // Enums
-    public enum Platform {
-        whatsapp, telegram
-    }
-    
     public enum AgentStatus {
         active, inactive, error
     }
     
     // Constructors
-    public Agent() {}
+    public AgentTelegram() {}
     
-    public Agent(String name, String description, Platform platform, String prompt) {
+    public AgentTelegram(String name, String description, String prompt) {
         this.name = name;
         this.description = description;
-        this.platform = platform;
         this.prompt = prompt;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -118,14 +109,6 @@ public class Agent {
         this.description = description;
     }
     
-    public Platform getPlatform() {
-        return platform;
-    }
-    
-    public void setPlatform(Platform platform) {
-        this.platform = platform;
-    }
-    
     public AgentStatus getStatus() {
         return status;
     }
@@ -142,12 +125,12 @@ public class Agent {
         this.prompt = prompt;
     }
     
-    public String getSessionName() {
-        return sessionName;
+    public String getBotName() {
+        return botName;
     }
     
-    public void setSessionName(String sessionName) {
-        this.sessionName = sessionName;
+    public void setBotName(String botName) {
+        this.botName = botName;
     }
     
     public String getPlatformConfig() {

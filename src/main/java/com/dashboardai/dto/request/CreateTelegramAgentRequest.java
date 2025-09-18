@@ -1,13 +1,11 @@
 package com.dashboardai.dto.request;
 
-import com.dashboardai.model.AgentPlatform;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-public class CreateAgentRequest {
+public class CreateTelegramAgentRequest {
     
     @NotBlank(message = "El nombre del agente es requerido")
     @Size(max = 255, message = "El nombre no puede exceder 255 caracteres")
@@ -16,15 +14,12 @@ public class CreateAgentRequest {
     @Size(max = 1000, message = "La descripción no puede exceder 1000 caracteres")
     private String description;
     
-    @NotNull(message = "La plataforma es requerida")
-    private AgentPlatform platform;
-    
     @NotBlank(message = "El prompt es requerido")
     private String prompt;
     
-    private String sessionName;
+    private String botName;
     
-    // Nuevos campos para soporte de múltiples workflows
+    // Campos para soporte de múltiples workflows
     private List<String> workflowIds;
     
     private String primaryWorkflowId;
@@ -34,12 +29,11 @@ public class CreateAgentRequest {
     private Long userId;
     
     // Constructors
-    public CreateAgentRequest() {}
+    public CreateTelegramAgentRequest() {}
     
-    public CreateAgentRequest(String name, String description, AgentPlatform platform, String prompt) {
+    public CreateTelegramAgentRequest(String name, String description, String prompt) {
         this.name = name;
         this.description = description;
-        this.platform = platform;
         this.prompt = prompt;
     }
     
@@ -60,14 +54,6 @@ public class CreateAgentRequest {
         this.description = description;
     }
     
-    public AgentPlatform getPlatform() {
-        return platform;
-    }
-    
-    public void setPlatform(AgentPlatform platform) {
-        this.platform = platform;
-    }
-    
     public String getPrompt() {
         return prompt;
     }
@@ -76,12 +62,12 @@ public class CreateAgentRequest {
         this.prompt = prompt;
     }
     
-    public String getSessionName() {
-        return sessionName;
+    public String getBotName() {
+        return botName;
     }
     
-    public void setSessionName(String sessionName) {
-        this.sessionName = sessionName;
+    public void setBotName(String botName) {
+        this.botName = botName;
     }
     
     public List<String> getWorkflowIds() {
@@ -118,12 +104,11 @@ public class CreateAgentRequest {
     
     @Override
     public String toString() {
-        return "CreateAgentRequest{" +
+        return "CreateTelegramAgentRequest{" +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
-                ", platform=" + platform +
                 ", prompt='" + prompt + '\'' +
-                ", sessionName='" + sessionName + '\'' +
+                ", botName='" + botName + '\'' +
                 ", workflowIds=" + workflowIds +
                 ", primaryWorkflowId='" + primaryWorkflowId + '\'' +
                 ", platformConfig='" + platformConfig + '\'' +
