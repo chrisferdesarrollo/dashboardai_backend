@@ -41,7 +41,7 @@ public class AgentTelegramService {
             // Verificar si ya existe un agente con ese bot name
             if (request.getBotName() != null && 
                 agentTelegramRepository.existsByBotName(request.getBotName())) {
-                throw new RuntimeException("Ya existe un agente con ese bot name");
+                throw new RuntimeException("Error al crear el agente telegram: El bot " + request.getBotName() + " ya está en uso");
             }
             
             // Crear la entidad AgentTelegram
