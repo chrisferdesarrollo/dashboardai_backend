@@ -205,6 +205,46 @@ public class AgentTelegramController {
         }
     }
     
+    /**
+     * Conectar un agente Telegram
+     */
+    @PostMapping("/{agentId}/connect")
+    public ResponseEntity<?> connectAgent(@PathVariable UUID agentId) {
+        try {
+            logger.info("POST /api/agents/telegram/{}/connect - Connecting Telegram agent", agentId);
+            
+            // Actualizar estado del agente a activo
+            agentTelegramService.updateAgentStatus(agentId, AgentTelegram.AgentStatus.active);
+            
+            return ResponseEntity.ok(new MessageResponse("Agente Telegram conectado exitosamente"));
+            
+        } catch (Exception e) {
+            logger.error("Error connecting Telegram agent {}: {}", agentId, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Desconectar un agente Telegram
+     */
+    @PostMapping("/{agentId}/disconnect")
+    public ResponseEntity<?> disconnectAgent(@PathVariable UUID agentId) {
+        try {
+            logger.info("POST /api/agents/telegram/{}/disconnect - Disconnecting Telegram agent", agentId);
+            
+            // Actualizar estado del agente a inactivo
+            agentTelegramService.updateAgentStatus(agentId, AgentTelegram.AgentStatus.inactive);
+            
+            return ResponseEntity.ok(new MessageResponse("Agente Telegram desconectado exitosamente"));
+            
+        } catch (Exception e) {
+            logger.error("Error disconnecting Telegram agent {}: {}", agentId, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
     // Clases internas para wrappers de respuesta
     public static class CreateAgentResponseWrapper {
         private boolean success;
