@@ -13,6 +13,7 @@ public class TelegramAgentResponse {
     private AgentTelegram.AgentStatus status;
     private String prompt;
     private String botName;
+    private String botToken;
     private String platformConfig;
     private Integer totalExecutions;
     private LocalDateTime lastExecutionAt;
@@ -30,6 +31,7 @@ public class TelegramAgentResponse {
         this.status = agent.getStatus();
         this.prompt = agent.getPrompt();
         this.botName = agent.getBotName();
+        this.botToken = agent.getBotToken(); // Nuevo campo
         this.platformConfig = agent.getPlatformConfig();
         this.totalExecutions = agent.getTotalExecutions();
         this.lastExecutionAt = agent.getLastExecutionAt();
@@ -85,6 +87,14 @@ public class TelegramAgentResponse {
     
     public void setBotName(String botName) {
         this.botName = botName;
+    }
+    
+    public String getBotToken() {
+        return botToken;
+    }
+    
+    public void setBotToken(String botToken) {
+        this.botToken = botToken;
     }
     
     public String getPlatformConfig() {

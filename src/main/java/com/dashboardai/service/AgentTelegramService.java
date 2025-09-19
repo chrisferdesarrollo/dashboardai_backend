@@ -51,9 +51,26 @@ public class AgentTelegramService {
             agent.setPrompt(request.getPrompt());
             agent.setBotName(request.getBotName());
             
-            // Procesar platformConfig - asegurar que es un JSON válido
+            // Procesar platformConfig - asegurar que es un JSON válido y extraer el botToken
+            String botToken = null;
             if (request.getPlatformConfig() != null && !request.getPlatformConfig().isEmpty()) {
                 agent.setPlatformConfig(request.getPlatformConfig());
+                
+                // Extraer el botToken del platformConfig
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode configJson = mapper.readTree(request.getPlatformConfig());
+                    
+                    if (configJson.has("botToken")) {
+                        botToken = configJson.get("botToken").asText();
+                        if (botToken != null && !botToken.trim().isEmpty()) {
+                            agent.setBotToken(botToken);
+                            logger.info("Bot token extracted and saved for agent: {}", request.getName());
+                        }
+                    }
+                } catch (Exception parseError) {
+                    logger.warn("Could not parse platform config to extract bot token: {}", parseError.getMessage());
+                }
             } else {
                 agent.setPlatformConfig("{}"); // JSON vacío por defecto
             }
@@ -213,6 +230,52 @@ public class AgentTelegramService {
         } catch (Exception e) {
             logger.error("Error counting active Telegram agents: {}", e.getMessage(), e);
             return 0L;
+        }
+    }
+    
+    /**
+     * Obtener el token del bot desde el campo dedicado botToken
+     */
+    @Transactional(readOnly = true)
+    public String getBotToken(UUID agentId) {
+        try {
+            Optional<AgentTelegram> agentOpt = agentTelegramRepository.findById(agentId);
+            if (agentOpt.isEmpty()) {
+                throw new RuntimeException("Agente Telegram no encontrado con ID: " + agentId);
+            }
+            
+            AgentTelegram agent = agentOpt.get();
+            String botToken = agent.getBotToken();
+            
+            if (botToken != null && !botToken.trim().isEmpty()) {
+                logger.info("Bot token retrieved from dedicated field for agent: {}", agentId);
+                return botToken;
+            }
+            
+            // Fallback: intentar extraer desde platformConfig si no existe en el campo dedicado
+            String platformConfig = agent.getPlatformConfig();
+            if (platformConfig != null && !platformConfig.isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode configJson = mapper.readTree(platformConfig);
+                    
+                    if (configJson.has("botToken")) {
+                        String tokenFromConfig = configJson.get("botToken").asText();
+                        if (tokenFromConfig != null && !tokenFromConfig.trim().isEmpty()) {
+                            logger.info("Bot token retrieved from platform config for agent: {}", agentId);
+                            return tokenFromConfig;
+                        }
+                    }
+                } catch (Exception parseError) {
+                    logger.error("Error parsing platform config for agent {}: {}", agentId, parseError.getMessage());
+                }
+            }
+            
+            throw new RuntimeException("Bot token no encontrado para el agente: " + agentId);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving bot token for agent {}: {}", agentId, e.getMessage(), e);
+            throw new RuntimeException("Error obteniendo token del bot: " + e.getMessage());
         }
     }
 }

@@ -193,6 +193,99 @@ public class AgentController {
         }
     }
     
+    /**
+     * Eliminar un agente por ID
+     * Busca en ambas tablas (WhatsApp y Telegram) y elimina del lugar correcto
+     */
+    @DeleteMapping("/{agentId}")
+    public ResponseEntity<?> deleteAgent(@PathVariable UUID agentId) {
+        try {
+            logger.info("DELETE /api/agents/{} - Deleting agent", agentId);
+            
+            // Primero intentar encontrar en WhatsApp
+            try {
+                var whatsappAgent = agentWhatsAppService.getAgentById(agentId);
+                if (whatsappAgent != null) {
+                    agentWhatsAppService.deleteAgent(agentId);
+                    logger.info("WhatsApp agent {} deleted successfully", agentId);
+                    return ResponseEntity.ok(new MessageResponse("Agente WhatsApp eliminado correctamente"));
+                }
+            } catch (RuntimeException e) {
+                // El agente no existe en WhatsApp, continuar buscando en Telegram
+                logger.debug("Agent not found in WhatsApp table: {}", e.getMessage());
+            }
+            
+            // Luego intentar encontrar en Telegram
+            try {
+                var telegramAgent = agentTelegramService.getAgentById(agentId);
+                if (telegramAgent != null) {
+                    agentTelegramService.deleteAgent(agentId);
+                    logger.info("Telegram agent {} deleted successfully", agentId);
+                    return ResponseEntity.ok(new MessageResponse("Agente Telegram eliminado correctamente"));
+                }
+            } catch (RuntimeException e) {
+                // El agente no existe en Telegram tampoco
+                logger.debug("Agent not found in Telegram table: {}", e.getMessage());
+            }
+            
+            // Si llegamos aquí, el agente no existe en ninguna tabla
+            logger.warn("Agent {} not found in any table", agentId);
+            return ResponseEntity.notFound().build();
+            
+        } catch (Exception e) {
+            logger.error("Error deleting agent {}: {}", agentId, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error al eliminar agente: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Actualizar el estado de un agente (WhatsApp o Telegram)
+     * Mantiene compatibilidad con frontend existente
+     */
+    @PutMapping("/{agentId}/status")
+    public ResponseEntity<?> updateAgentStatus(@PathVariable UUID agentId, @Valid @RequestBody UpdateStatusRequest request) {
+        try {
+            logger.info("PUT /api/agents/{}/status - Updating agent status", agentId);
+            
+            // Primero intentar encontrar el agente en WhatsApp
+            try {
+                var whatsappAgent = agentWhatsAppService.getAgentById(agentId);
+                if (whatsappAgent != null && request.getWhatsappStatus() != null) {
+                    var updatedAgent = agentWhatsAppService.updateAgentStatus(agentId, request.getWhatsappStatus());
+                    logger.info("WhatsApp agent {} status updated to {}", agentId, request.getWhatsappStatus());
+                    return ResponseEntity.ok(new UnifiedAgentResponse(updatedAgent, "whatsapp"));
+                }
+            } catch (RuntimeException e) {
+                // El agente no existe en WhatsApp, intentar Telegram
+                logger.debug("Agent not found in WhatsApp table: {}", e.getMessage());
+            }
+            
+            // Si no es WhatsApp o no se encontró, intentar con Telegram
+            try {
+                var telegramAgent = agentTelegramService.getAgentById(agentId);
+                if (telegramAgent != null && request.getTelegramStatus() != null) {
+                    // Para Telegram, por ahora solo retornamos el agente sin cambiar estado
+                    // TODO: Implementar updateAgentStatus en AgentTelegramService
+                    logger.info("Telegram agent {} found, but status update not implemented yet", agentId);
+                    return ResponseEntity.ok(new UnifiedAgentResponse(telegramAgent, "telegram"));
+                }
+            } catch (RuntimeException e) {
+                // El agente no existe en Telegram tampoco
+                logger.debug("Agent not found in Telegram table: {}", e.getMessage());
+            }
+            
+            // Si llegamos aquí, el agente no existe en ninguna tabla
+            logger.warn("Agent {} not found in any table", agentId);
+            return ResponseEntity.notFound().build();
+            
+        } catch (Exception e) {
+            logger.error("Error updating agent status {}: {}", agentId, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error al actualizar estado del agente: " + e.getMessage()));
+        }
+    }
+
     // Clases auxiliares para las respuestas
     public static class CreateAgentResponseWrapper {
         private boolean success;

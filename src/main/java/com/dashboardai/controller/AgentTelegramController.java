@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 @RestController
@@ -115,6 +117,32 @@ public class AgentTelegramController {
             
         } catch (Exception e) {
             logger.error("Error fetching Telegram agent by bot name {}: {}", botName, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtener el token del bot para uso en workflows
+     * Este endpoint puede ser llamado por n8n para obtener el token necesario
+     */
+    @GetMapping("/{agentId}/bot-token")
+    public ResponseEntity<?> getBotToken(@PathVariable UUID agentId) {
+        try {
+            logger.info("GET /api/agents/telegram/{}/bot-token - Fetching bot token for workflow", agentId);
+            
+            String botToken = agentTelegramService.getBotToken(agentId);
+            
+            // Respuesta con el token (solo para workflows autorizados)
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("botToken", botToken);
+            response.put("timestamp", java.time.LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error fetching bot token for agent {}: {}", agentId, e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(new MessageResponse(e.getMessage()));
         }
