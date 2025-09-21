@@ -9,11 +9,9 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,26 +32,52 @@ public class ConversationLogController {
     @PostMapping
     public ResponseEntity<?> createConversationLog(@Valid @RequestBody CreateConversationLogRequest request) {
         try {
-            logger.info("POST /api/conversation-logs - Creating conversation log for session: {}, user: {}", 
-                       request.getSessionName(), request.getUserName());
+            logger.info("POST /api/conversation-logs - Request received:");
+            logger.info("SessionName: {}", request.getSessionName());
+            logger.info("UserMessage: {}", request.getUserMessage());
+            logger.info("AiResponse: {}", request.getAiResponse());
+            logger.info("UserName: {}", request.getUserName());
+            logger.info("UserPhone: {}", request.getUserPhone());
+            logger.info("Timestamp: {}", request.getTimestamp());
             
             ConversationLog savedLog;
             
             if (request.getTimestamp() != null) {
-                savedLog = conversationLogService.saveConversationLog(
-                    request.getSessionName(),
-                    request.getUserMessage(),
-                    request.getAiResponse(),
-                    request.getUserName(),
-                    request.getTimestamp()
-                );
+                if (request.getUserPhone() != null) {
+                    savedLog = conversationLogService.saveConversationLog(
+                        request.getSessionName(),
+                        request.getUserMessage(),
+                        request.getAiResponse(),
+                        request.getUserName(),
+                        request.getUserPhone(),
+                        request.getTimestamp()
+                    );
+                } else {
+                    savedLog = conversationLogService.saveConversationLog(
+                        request.getSessionName(),
+                        request.getUserMessage(),
+                        request.getAiResponse(),
+                        request.getUserName(),
+                        request.getTimestamp()
+                    );
+                }
             } else {
-                savedLog = conversationLogService.saveConversationLog(
-                    request.getSessionName(),
-                    request.getUserMessage(),
-                    request.getAiResponse(),
-                    request.getUserName()
-                );
+                if (request.getUserPhone() != null) {
+                    savedLog = conversationLogService.saveConversationLog(
+                        request.getSessionName(),
+                        request.getUserMessage(),
+                        request.getAiResponse(),
+                        request.getUserName(),
+                        request.getUserPhone()
+                    );
+                } else {
+                    savedLog = conversationLogService.saveConversationLog(
+                        request.getSessionName(),
+                        request.getUserMessage(),
+                        request.getAiResponse(),
+                        request.getUserName()
+                    );
+                }
             }
             
             ConversationLogResponse response = new ConversationLogResponse(savedLog);

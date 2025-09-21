@@ -20,6 +20,9 @@ public class CreateConversationLogRequest {
     @Size(max = 255, message = "El nombre del usuario no puede exceder 255 caracteres")
     private String userName;
     
+    @Size(max = 50, message = "El teléfono del usuario no puede exceder 50 caracteres")
+    private String userPhone;
+    
     private ZonedDateTime timestamp;
     
     // Constructors
@@ -30,6 +33,14 @@ public class CreateConversationLogRequest {
         this.userMessage = userMessage;
         this.aiResponse = aiResponse;
         this.userName = userName;
+    }
+    
+    public CreateConversationLogRequest(String sessionName, String userMessage, String aiResponse, String userName, String userPhone) {
+        this.sessionName = sessionName;
+        this.userMessage = userMessage;
+        this.aiResponse = aiResponse;
+        this.userName = userName;
+        this.userPhone = userPhone;
     }
     
     // Getters and Setters
@@ -65,6 +76,14 @@ public class CreateConversationLogRequest {
         this.userName = userName;
     }
     
+    public String getUserPhone() {
+        return userPhone;
+    }
+    
+    public void setUserPhone(String userPhone) {
+        this.userPhone = userPhone;
+    }
+    
     public ZonedDateTime getTimestamp() {
         return timestamp;
     }
@@ -80,6 +99,7 @@ public class CreateConversationLogRequest {
                 ", userMessage='" + userMessage + '\'' +
                 ", aiResponse='" + aiResponse + '\'' +
                 ", userName='" + userName + '\'' +
+                ", userPhone='" + userPhone + '\'' +
                 ", timestamp=" + timestamp +
                 '}';
     }

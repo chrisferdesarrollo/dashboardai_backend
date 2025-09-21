@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -34,6 +33,9 @@ public class ConversationLog {
     @Column(name = "user_name")
     private String userName;
     
+    @Column(name = "user_phone", length = 50)
+    private String userPhone;
+    
     @Column(name = "timestamp", columnDefinition = "timestamp with time zone")
     private ZonedDateTime timestamp;
     
@@ -48,6 +50,15 @@ public class ConversationLog {
         this.userMessage = userMessage;
         this.aiResponse = aiResponse;
         this.userName = userName;
+        this.createdAt = ZonedDateTime.now();
+    }
+    
+    public ConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone) {
+        this.sessionName = sessionName;
+        this.userMessage = userMessage;
+        this.aiResponse = aiResponse;
+        this.userName = userName;
+        this.userPhone = userPhone;
         this.createdAt = ZonedDateTime.now();
     }
     
@@ -100,6 +111,14 @@ public class ConversationLog {
         this.userName = userName;
     }
     
+    public String getUserPhone() {
+        return userPhone;
+    }
+    
+    public void setUserPhone(String userPhone) {
+        this.userPhone = userPhone;
+    }
+    
     public ZonedDateTime getTimestamp() {
         return timestamp;
     }
@@ -125,6 +144,7 @@ public class ConversationLog {
                 ", userMessage='" + userMessage + '\'' +
                 ", aiResponse='" + aiResponse + '\'' +
                 ", userName='" + userName + '\'' +
+                ", userPhone='" + userPhone + '\'' +
                 ", timestamp=" + timestamp +
                 ", createdAt=" + createdAt +
                 '}';

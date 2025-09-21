@@ -73,6 +73,58 @@ public class ConversationLogService {
     }
     
     /**
+     * Guardar un nuevo log de conversación con teléfono
+     */
+    public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone) {
+        try {
+            logger.info("Saving conversation log for session: {}, user: {}, phone: {}", sessionName, userName, userPhone);
+            
+            ConversationLog conversationLog = new ConversationLog();
+            conversationLog.setSessionName(sessionName);
+            conversationLog.setUserMessage(userMessage);
+            conversationLog.setAiResponse(aiResponse);
+            conversationLog.setUserName(userName);
+            conversationLog.setUserPhone(userPhone);
+            conversationLog.setTimestamp(ZonedDateTime.now());
+            
+            ConversationLog savedLog = conversationLogRepository.save(conversationLog);
+            
+            logger.info("Conversation log saved successfully with ID: {}", savedLog.getId());
+            return savedLog;
+            
+        } catch (Exception e) {
+            logger.error("Error saving conversation log: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar el log de conversación: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Guardar un nuevo log de conversación con teléfono y timestamp personalizado
+     */
+    public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, ZonedDateTime timestamp) {
+        try {
+            logger.info("Saving conversation log with custom timestamp for session: {}, user: {}, phone: {}", sessionName, userName, userPhone);
+            
+            ConversationLog conversationLog = new ConversationLog();
+            conversationLog.setSessionName(sessionName);
+            conversationLog.setUserMessage(userMessage);
+            conversationLog.setAiResponse(aiResponse);
+            conversationLog.setUserName(userName);
+            conversationLog.setUserPhone(userPhone);
+            conversationLog.setTimestamp(timestamp);
+            
+            ConversationLog savedLog = conversationLogRepository.save(conversationLog);
+            
+            logger.info("Conversation log with custom timestamp saved successfully with ID: {}", savedLog.getId());
+            return savedLog;
+            
+        } catch (Exception e) {
+            logger.error("Error saving conversation log with custom timestamp: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar el log de conversación: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Guardar un log completo desde un objeto ConversationLog
      */
     public ConversationLog saveConversationLog(ConversationLog conversationLog) {
