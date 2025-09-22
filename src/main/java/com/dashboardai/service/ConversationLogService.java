@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -348,6 +349,39 @@ public class ConversationLogService {
         } catch (Exception e) {
             logger.error("Error deleting conversation log {}: {}", logId, e.getMessage(), e);
             throw new RuntimeException("Error al eliminar el log de conversación");
+        }
+    }
+    
+    /**
+     * Obtener conversaciones agrupadas por sesión con información resumida
+     */
+    @Transactional(readOnly = true)
+    public List<Object[]> getConversationSessionsSummary() {
+        try {
+            logger.info("Fetching conversation sessions summary");
+            return conversationLogRepository.getConversationStatsBySession();
+        } catch (Exception e) {
+            logger.error("Error fetching conversation sessions summary: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener el resumen de sesiones de conversación");
+        }
+    }
+    
+    /**
+     * Obtener todas las sesiones únicas con información básica
+     */
+    @Transactional(readOnly = true)
+    public List<String> getAllUniqueSessions() {
+        try {
+            logger.info("Fetching all unique session names");
+            return conversationLogRepository.findAll()
+                    .stream()
+                    .map(ConversationLog::getSessionName)
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Error fetching unique sessions: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener las sesiones únicas");
         }
     }
 }

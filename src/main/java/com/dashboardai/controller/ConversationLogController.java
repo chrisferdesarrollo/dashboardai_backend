@@ -319,6 +319,44 @@ public class ConversationLogController {
         }
     }
     
+    /**
+     * Obtener todas las sesiones únicas
+     */
+    @GetMapping("/sessions")
+    public ResponseEntity<?> getAllUniqueSessions() {
+        try {
+            logger.info("GET /api/conversation-logs/sessions - Fetching all unique sessions");
+            
+            List<String> sessions = conversationLogService.getAllUniqueSessions();
+            
+            return ResponseEntity.ok(new GetSessionsResponseWrapper(true, sessions, null));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching unique sessions: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new GetSessionsResponseWrapper(false, null, e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtener estadísticas de conversaciones por sesión
+     */
+    @GetMapping("/sessions/stats")
+    public ResponseEntity<?> getConversationSessionsStats() {
+        try {
+            logger.info("GET /api/conversation-logs/sessions/stats - Fetching conversation sessions statistics");
+            
+            List<Object[]> stats = conversationLogService.getConversationSessionsSummary();
+            
+            return ResponseEntity.ok(new GetConversationStatsResponseWrapper(true, stats, null));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching conversation sessions stats: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new GetConversationStatsResponseWrapper(false, null, e.getMessage()));
+        }
+    }
+    
     // Response Wrapper Classes
     public static class CreateConversationLogResponseWrapper {
         private boolean success;
@@ -396,6 +434,26 @@ public class ConversationLogController {
         public void setSuccess(boolean success) { this.success = success; }
         public Long getData() { return data; }
         public void setData(Long data) { this.data = data; }
+        public String getError() { return error; }
+        public void setError(String error) { this.error = error; }
+    }
+    
+    public static class GetConversationStatsResponseWrapper {
+        private boolean success;
+        private List<Object[]> data;
+        private String error;
+        
+        public GetConversationStatsResponseWrapper(boolean success, List<Object[]> data, String error) {
+            this.success = success;
+            this.data = data;
+            this.error = error;
+        }
+        
+        // Getters and setters
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+        public List<Object[]> getData() { return data; }
+        public void setData(List<Object[]> data) { this.data = data; }
         public String getError() { return error; }
         public void setError(String error) { this.error = error; }
     }
