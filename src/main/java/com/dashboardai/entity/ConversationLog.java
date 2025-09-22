@@ -36,6 +36,9 @@ public class ConversationLog {
     @Column(name = "user_phone", length = 50)
     private String userPhone;
     
+    @Column(name = "platform", length = 20)
+    private String platform;
+    
     @Column(name = "timestamp", columnDefinition = "timestamp with time zone")
     private ZonedDateTime timestamp;
     
@@ -59,6 +62,16 @@ public class ConversationLog {
         this.aiResponse = aiResponse;
         this.userName = userName;
         this.userPhone = userPhone;
+        this.createdAt = ZonedDateTime.now();
+    }
+    
+    public ConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, String platform) {
+        this.sessionName = sessionName;
+        this.userMessage = userMessage;
+        this.aiResponse = aiResponse;
+        this.userName = userName;
+        this.userPhone = userPhone;
+        this.platform = platform;
         this.createdAt = ZonedDateTime.now();
     }
     
@@ -119,6 +132,14 @@ public class ConversationLog {
         this.userPhone = userPhone;
     }
     
+    public String getPlatform() {
+        return platform;
+    }
+    
+    public void setPlatform(String platform) {
+        this.platform = platform;
+    }
+    
     public ZonedDateTime getTimestamp() {
         return timestamp;
     }
@@ -145,6 +166,7 @@ public class ConversationLog {
                 ", aiResponse='" + aiResponse + '\'' +
                 ", userName='" + userName + '\'' +
                 ", userPhone='" + userPhone + '\'' +
+                ", platform='" + platform + '\'' +
                 ", timestamp=" + timestamp +
                 ", createdAt=" + createdAt +
                 '}';

@@ -126,6 +126,60 @@ public class ConversationLogService {
     }
     
     /**
+     * Guardar un nuevo log de conversación con plataforma
+     */
+    public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, String platform) {
+        try {
+            logger.info("Saving conversation log for session: {}, user: {}, phone: {}, platform: {}", sessionName, userName, userPhone, platform);
+            
+            ConversationLog conversationLog = new ConversationLog();
+            conversationLog.setSessionName(sessionName);
+            conversationLog.setUserMessage(userMessage);
+            conversationLog.setAiResponse(aiResponse);
+            conversationLog.setUserName(userName);
+            conversationLog.setUserPhone(userPhone);
+            conversationLog.setPlatform(platform);
+            conversationLog.setTimestamp(ZonedDateTime.now());
+            
+            ConversationLog savedLog = conversationLogRepository.save(conversationLog);
+            
+            logger.info("Conversation log saved successfully with ID: {}", savedLog.getId());
+            return savedLog;
+            
+        } catch (Exception e) {
+            logger.error("Error saving conversation log: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar el log de conversación: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Guardar un nuevo log de conversación con plataforma y timestamp personalizado
+     */
+    public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, String platform, ZonedDateTime timestamp) {
+        try {
+            logger.info("Saving conversation log with custom timestamp for session: {}, user: {}, phone: {}, platform: {}", sessionName, userName, userPhone, platform);
+            
+            ConversationLog conversationLog = new ConversationLog();
+            conversationLog.setSessionName(sessionName);
+            conversationLog.setUserMessage(userMessage);
+            conversationLog.setAiResponse(aiResponse);
+            conversationLog.setUserName(userName);
+            conversationLog.setUserPhone(userPhone);
+            conversationLog.setPlatform(platform);
+            conversationLog.setTimestamp(timestamp);
+            
+            ConversationLog savedLog = conversationLogRepository.save(conversationLog);
+            
+            logger.info("Conversation log with custom timestamp saved successfully with ID: {}", savedLog.getId());
+            return savedLog;
+            
+        } catch (Exception e) {
+            logger.error("Error saving conversation log with custom timestamp: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar el log de conversación: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Guardar un log completo desde un objeto ConversationLog
      */
     public ConversationLog saveConversationLog(ConversationLog conversationLog) {
@@ -154,6 +208,22 @@ public class ConversationLogService {
         } catch (Exception e) {
             logger.error("Error fetching all conversation logs: {}", e.getMessage(), e);
             throw new RuntimeException("Error al obtener los logs de conversación");
+        }
+    }
+    
+    /**
+     * Obtener logs de conversación por plataforma
+     */
+    @Transactional(readOnly = true)
+    public List<ConversationLog> getConversationLogsByPlatform(String platform) {
+        try {
+            logger.info("Fetching conversation logs for platform: {}", platform);
+            List<ConversationLog> logs = conversationLogRepository.findByPlatformOrderByCreatedAtDesc(platform);
+            logger.info("Found {} logs for platform: {}", logs.size(), platform);
+            return logs;
+        } catch (Exception e) {
+            logger.error("Error fetching conversation logs for platform {}: {}", platform, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener los logs de conversación para la plataforma: " + platform);
         }
     }
     

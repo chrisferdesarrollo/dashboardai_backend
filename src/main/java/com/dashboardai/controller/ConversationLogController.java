@@ -38,46 +38,40 @@ public class ConversationLogController {
             logger.info("AiResponse: {}", request.getAiResponse());
             logger.info("UserName: {}", request.getUserName());
             logger.info("UserPhone: {}", request.getUserPhone());
+            logger.info("Platform: {}", request.getPlatform());
             logger.info("Timestamp: {}", request.getTimestamp());
             
             ConversationLog savedLog;
             
+            // Auto-detectar platform si no viene especificado
+            String detectedPlatform = request.getPlatform();
+            if (detectedPlatform == null || detectedPlatform.trim().isEmpty()) {
+                detectedPlatform = detectPlatform(request.getUserPhone(), request.getSessionName());
+                logger.info("Platform auto-detected as: {}", detectedPlatform);
+            }
+            
+            // Determinar qué método usar basado en los campos disponibles
             if (request.getTimestamp() != null) {
-                if (request.getUserPhone() != null) {
-                    savedLog = conversationLogService.saveConversationLog(
-                        request.getSessionName(),
-                        request.getUserMessage(),
-                        request.getAiResponse(),
-                        request.getUserName(),
-                        request.getUserPhone(),
-                        request.getTimestamp()
-                    );
-                } else {
-                    savedLog = conversationLogService.saveConversationLog(
-                        request.getSessionName(),
-                        request.getUserMessage(),
-                        request.getAiResponse(),
-                        request.getUserName(),
-                        request.getTimestamp()
-                    );
-                }
+                // Siempre usar la versión que incluye platform
+                savedLog = conversationLogService.saveConversationLog(
+                    request.getSessionName(),
+                    request.getUserMessage(),
+                    request.getAiResponse(),
+                    request.getUserName(),
+                    request.getUserPhone(),
+                    detectedPlatform,
+                    request.getTimestamp()
+                );
             } else {
-                if (request.getUserPhone() != null) {
-                    savedLog = conversationLogService.saveConversationLog(
-                        request.getSessionName(),
-                        request.getUserMessage(),
-                        request.getAiResponse(),
-                        request.getUserName(),
-                        request.getUserPhone()
-                    );
-                } else {
-                    savedLog = conversationLogService.saveConversationLog(
-                        request.getSessionName(),
-                        request.getUserMessage(),
-                        request.getAiResponse(),
-                        request.getUserName()
-                    );
-                }
+                // Siempre usar la versión que incluye platform
+                savedLog = conversationLogService.saveConversationLog(
+                    request.getSessionName(),
+                    request.getUserMessage(),
+                    request.getAiResponse(),
+                    request.getUserName(),
+                    request.getUserPhone(),
+                    detectedPlatform
+                );
             }
             
             ConversationLogResponse response = new ConversationLogResponse(savedLog);
@@ -92,14 +86,57 @@ public class ConversationLogController {
     }
     
     /**
-     * Obtener todos los logs de conversación
+     * Detectar plataforma basada en el teléfono o nombre de sesión
+     */
+    private String detectPlatform(String userPhone, String sessionName) {
+        // 1. Detectar por nombre de sesión (patrón más confiable)
+        if (sessionName != null) {
+            String sessionLower = sessionName.toLowerCase();
+            
+            // WhatsApp usa patrones como: agent_*, whatsapp_*, wa_*
+            if (sessionLower.startsWith("agent_") || 
+                sessionLower.contains("whatsapp") || 
+                sessionLower.contains("wa_")) {
+                return "whatsapp";
+            }
+            
+            // Telegram usa patrones como: bot_*, token_*, telegram_*, tg_*
+            if (sessionLower.startsWith("bot_") || 
+                sessionLower.startsWith("token_") ||
+                sessionLower.contains("telegram") || 
+                sessionLower.contains("tg_")) {
+                return "telegram";
+            }
+        }
+        
+        // 2. Detectar por número de teléfono (formato WhatsApp)
+        if (userPhone != null && userPhone.contains("@c.us")) {
+            return "whatsapp";
+        }
+        
+        // 3. Valor por defecto (ajustar según tu caso más común)
+        return "whatsapp";  // Cambié de "unknown" a "whatsapp" como default
+    }
+    
+    /**
+     * Obtener todos los logs de conversación (con filtro opcional por plataforma)
      */
     @GetMapping
-    public ResponseEntity<?> getAllConversationLogs() {
+    public ResponseEntity<?> getAllConversationLogs(@RequestParam(required = false) String platform) {
         try {
-            logger.info("GET /api/conversation-logs - Fetching all conversation logs");
+            logger.info("GET /api/conversation-logs - Fetching conversation logs with platform filter: {}", platform);
             
-            List<ConversationLog> logs = conversationLogService.getAllConversationLogs();
+            List<ConversationLog> logs;
+            if (platform != null && !platform.isEmpty() && !platform.equalsIgnoreCase("all")) {
+                // Filtrar por plataforma específica
+                logs = conversationLogService.getConversationLogsByPlatform(platform);
+                logger.info("Retrieved {} logs for platform: {}", logs.size(), platform);
+            } else {
+                // Obtener todos los logs
+                logs = conversationLogService.getAllConversationLogs();
+                logger.info("Retrieved {} logs for all platforms", logs.size());
+            }
+            
             List<ConversationLogResponse> responses = logs.stream()
                     .map(ConversationLogResponse::new)
                     .collect(Collectors.toList());

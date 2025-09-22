@@ -74,6 +74,12 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
     // Verificar si existe algún log para una sesión
     boolean existsBySessionName(String sessionName);
     
+    // Buscar logs por plataforma
+    List<ConversationLog> findByPlatform(String platform);
+    
+    // Buscar logs por plataforma ordenados por fecha de creación descendente
+    List<ConversationLog> findByPlatformOrderByCreatedAtDesc(String platform);
+    
     // Obtener logs paginados por sesión
     @Query(value = "SELECT * FROM conversation_logs WHERE session_name = :sessionName ORDER BY created_at ASC LIMIT :limit OFFSET :offset", 
            nativeQuery = true)

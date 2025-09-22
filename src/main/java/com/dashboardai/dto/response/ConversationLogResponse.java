@@ -13,6 +13,7 @@ public class ConversationLogResponse {
     private String aiResponse;
     private String userName;
     private String userPhone;
+    private String platform;
     private ZonedDateTime timestamp;
     private ZonedDateTime createdAt;
     
@@ -26,6 +27,7 @@ public class ConversationLogResponse {
         this.aiResponse = conversationLog.getAiResponse();
         this.userName = conversationLog.getUserName();
         this.userPhone = conversationLog.getUserPhone();
+        this.platform = conversationLog.getPlatform();
         this.timestamp = conversationLog.getTimestamp();
         this.createdAt = conversationLog.getCreatedAt();
     }
@@ -77,6 +79,14 @@ public class ConversationLogResponse {
     
     public void setUserPhone(String userPhone) {
         this.userPhone = userPhone;
+    }
+    
+    public String getPlatform() {
+        return platform;
+    }
+    
+    public void setPlatform(String platform) {
+        this.platform = platform;
     }
     
     public ZonedDateTime getTimestamp() {

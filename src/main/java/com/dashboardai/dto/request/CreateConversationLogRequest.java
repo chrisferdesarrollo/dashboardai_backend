@@ -23,6 +23,9 @@ public class CreateConversationLogRequest {
     @Size(max = 50, message = "El teléfono del usuario no puede exceder 50 caracteres")
     private String userPhone;
     
+    @Size(max = 20, message = "La plataforma no puede exceder 20 caracteres")
+    private String platform;
+    
     private ZonedDateTime timestamp;
     
     // Constructors
@@ -82,6 +85,14 @@ public class CreateConversationLogRequest {
     
     public void setUserPhone(String userPhone) {
         this.userPhone = userPhone;
+    }
+    
+    public String getPlatform() {
+        return platform;
+    }
+    
+    public void setPlatform(String platform) {
+        this.platform = platform;
     }
     
     public ZonedDateTime getTimestamp() {
