@@ -41,6 +41,24 @@ public class ConversationLogController {
             logger.info("Platform: {}", request.getPlatform());
             logger.info("Timestamp: {}", request.getTimestamp());
             
+            // Procesar mensajes para convertir caracteres de escape
+            String processedUserMessage = request.getUserMessage();
+            String processedAiResponse = request.getAiResponse();
+            
+            if (processedUserMessage != null) {
+                processedUserMessage = processedUserMessage.replace("\\n", "\n")
+                                                         .replace("\\r", "\r")
+                                                         .replace("\\t", "\t");
+                logger.info("Processed UserMessage: {}", processedUserMessage);
+            }
+            
+            if (processedAiResponse != null) {
+                processedAiResponse = processedAiResponse.replace("\\n", "\n")
+                                                       .replace("\\r", "\r")
+                                                       .replace("\\t", "\t");
+                logger.info("Processed AiResponse: {}", processedAiResponse);
+            }
+            
             ConversationLog savedLog;
             
             // Auto-detectar platform si no viene especificado
@@ -55,8 +73,8 @@ public class ConversationLogController {
                 // Siempre usar la versión que incluye platform
                 savedLog = conversationLogService.saveConversationLog(
                     request.getSessionName(),
-                    request.getUserMessage(),
-                    request.getAiResponse(),
+                    processedUserMessage,
+                    processedAiResponse,
                     request.getUserName(),
                     request.getUserPhone(),
                     detectedPlatform,
@@ -66,8 +84,8 @@ public class ConversationLogController {
                 // Siempre usar la versión que incluye platform
                 savedLog = conversationLogService.saveConversationLog(
                     request.getSessionName(),
-                    request.getUserMessage(),
-                    request.getAiResponse(),
+                    processedUserMessage,
+                    processedAiResponse,
                     request.getUserName(),
                     request.getUserPhone(),
                     detectedPlatform
