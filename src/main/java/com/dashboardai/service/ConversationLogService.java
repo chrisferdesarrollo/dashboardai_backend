@@ -465,6 +465,31 @@ public class ConversationLogService {
     }
     
     /**
+     * Obtener conversaciones agrupadas por sesión con información resumida filtradas por userId
+     */
+    @Transactional(readOnly = true)
+    public List<ConversationSessionStatsResponse> getConversationSessionsSummaryByUserId(Long userId) {
+        try {
+            logger.info("Fetching conversation sessions summary with agent names for userId: {}", userId);
+            List<Object[]> rawResults = conversationLogRepository.getConversationStatsBySessionAndUserId(userId);
+            
+            return rawResults.stream()
+                    .map(result -> new ConversationSessionStatsResponse(
+                            (String) result[0],           // sessionName
+                            (Long) result[1],             // messageCount
+                            (ZonedDateTime) result[2],    // startTime
+                            (ZonedDateTime) result[3],    // lastActivity
+                            (String) result[4],           // agentName
+                            (String) result[5]            // platform
+                    ))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Error fetching conversation sessions summary for userId {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener el resumen de sesiones de conversación para el usuario");
+        }
+    }
+    
+    /**
      * Obtener todas las sesiones únicas con información básica
      */
     @Transactional(readOnly = true)

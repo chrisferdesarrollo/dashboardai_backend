@@ -68,6 +68,20 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
            "GROUP BY cl.sessionName, aw.name, at.name, aw.sessionName, at.sessionName, cl.platform " +
            "ORDER BY MAX(cl.createdAt) DESC")
     List<Object[]> getConversationStatsBySession();
+
+    // Obtener estadísticas de conversación por sesión filtradas por userId
+    @Query("SELECT cl.sessionName, COUNT(cl), MIN(cl.createdAt), MAX(cl.createdAt), " +
+           "COALESCE(aw.name, at.name, 'Agente sin nombre') as agentName, " +
+           "CASE WHEN aw.sessionName IS NOT NULL THEN 'whatsapp' " +
+           "     WHEN at.sessionName IS NOT NULL THEN 'telegram' " +
+           "     ELSE LOWER(cl.platform) END as platform " +
+           "FROM ConversationLog cl " +
+           "LEFT JOIN AgentWhatsApp aw ON cl.sessionName = aw.sessionName " +
+           "LEFT JOIN AgentTelegram at ON cl.sessionName = at.sessionName " +
+           "WHERE (aw.userId = :userId OR at.userId = :userId) " +
+           "GROUP BY cl.sessionName, aw.name, at.name, aw.sessionName, at.sessionName, cl.platform " +
+           "ORDER BY MAX(cl.createdAt) DESC")
+    List<Object[]> getConversationStatsBySessionAndUserId(@Param("userId") Long userId);
     
     // Query de debug para verificar los session names
     @Query("SELECT DISTINCT cl.sessionName, cl.platform FROM ConversationLog cl ORDER BY cl.sessionName")

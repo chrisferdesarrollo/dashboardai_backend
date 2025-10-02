@@ -5,12 +5,14 @@ import com.dashboardai.dto.response.ConversationLogResponse;
 import com.dashboardai.dto.response.ConversationSessionStatsResponse;
 import com.dashboardai.dto.response.MessageResponse;
 import com.dashboardai.entity.ConversationLog;
+import com.dashboardai.security.services.UserDetailsImpl;
 import com.dashboardai.service.ConversationLogService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +28,18 @@ public class ConversationLogController {
     
     @Autowired
     private ConversationLogService conversationLogService;
+    
+    /**
+     * Obtener el ID del usuario autenticado
+     */
+    private Long getCurrentUserId(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            // Temporal: usar usuario testuser (ID 2) cuando no hay autenticación
+            return 2L; // Usuario testuser que existe en la base de datos
+        }
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        return userDetails.getId();
+    }
     
     /**
      * Crear un nuevo log de conversación
@@ -395,14 +409,15 @@ public class ConversationLogController {
     }
     
     /**
-     * Obtener estadísticas de conversaciones por sesión
+     * Obtener estadísticas de conversaciones por sesión filtradas por usuario
      */
     @GetMapping("/sessions/stats")
-    public ResponseEntity<?> getConversationSessionsStats() {
+    public ResponseEntity<?> getConversationSessionsStats(Authentication authentication) {
         try {
-            logger.info("GET /api/conversation-logs/sessions/stats - Fetching conversation sessions statistics");
+            Long userId = getCurrentUserId(authentication);
+            logger.info("GET /api/conversation-logs/sessions/stats - Fetching conversation sessions statistics for userId: {}", userId);
             
-            List<ConversationSessionStatsResponse> stats = conversationLogService.getConversationSessionsSummary();
+            List<ConversationSessionStatsResponse> stats = conversationLogService.getConversationSessionsSummaryByUserId(userId);
             
             return ResponseEntity.ok(new GetConversationStatsResponseWrapper(true, stats, null));
             
