@@ -64,7 +64,7 @@ public class AgentController {
                 telegramRequest.setName(request.getName());
                 telegramRequest.setDescription(request.getDescription());
                 telegramRequest.setPrompt(request.getPrompt());
-                telegramRequest.setBotName(request.getSessionName()); // sessionName se mapea a botName para Telegram
+                telegramRequest.setSessionName(request.getSessionName()); // ✅ CORRECTO: mapear sessionName correctamente
                 telegramRequest.setPlatformConfig(request.getPlatformConfig());
                 telegramRequest.setUserId(request.getUserId());
                 telegramRequest.setWorkflowIds(request.getWorkflowIds());

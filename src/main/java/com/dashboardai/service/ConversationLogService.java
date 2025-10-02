@@ -1,5 +1,6 @@
 package com.dashboardai.service;
 
+import com.dashboardai.dto.response.ConversationSessionStatsResponse;
 import com.dashboardai.entity.ConversationLog;
 import com.dashboardai.repository.ConversationLogRepository;
 import org.slf4j.Logger;
@@ -426,10 +427,37 @@ public class ConversationLogService {
      * Obtener conversaciones agrupadas por sesión con información resumida
      */
     @Transactional(readOnly = true)
-    public List<Object[]> getConversationSessionsSummary() {
+    public List<ConversationSessionStatsResponse> getConversationSessionsSummary() {
         try {
-            logger.info("Fetching conversation sessions summary");
-            return conversationLogRepository.getConversationStatsBySession();
+            logger.info("Fetching conversation sessions summary with agent names");
+            
+            // Debug: verificar session names disponibles
+            List<Object[]> sessionNames = conversationLogRepository.getDistinctSessionNames();
+            logger.info("Available session names in conversation_logs:");
+            for (Object[] session : sessionNames) {
+                logger.info("SessionName: {}, Platform: {}", session[0], session[1]);
+            }
+            
+            // Debug: verificar joins con telegram
+            List<Object[]> telegramJoins = conversationLogRepository.debugTelegramJoins();
+            logger.info("Telegram joins debug:");
+            for (Object[] join : telegramJoins) {
+                logger.info("ConversationSessionName: {}, Platform: {}, AgentSessionName: {}, AgentName: {}", 
+                           join[0], join[1], join[2], join[3]);
+            }
+            
+            List<Object[]> rawResults = conversationLogRepository.getConversationStatsBySession();
+            
+            return rawResults.stream()
+                    .map(result -> new ConversationSessionStatsResponse(
+                            (String) result[0],           // sessionName
+                            (Long) result[1],             // messageCount
+                            (ZonedDateTime) result[2],    // startTime
+                            (ZonedDateTime) result[3],    // lastActivity
+                            (String) result[4],           // agentName
+                            (String) result[5]            // platform
+                    ))
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             logger.error("Error fetching conversation sessions summary: {}", e.getMessage(), e);
             throw new RuntimeException("Error al obtener el resumen de sesiones de conversación");

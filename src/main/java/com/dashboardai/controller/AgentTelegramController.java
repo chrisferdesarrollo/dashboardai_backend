@@ -123,6 +123,25 @@ public class AgentTelegramController {
     }
     
     /**
+     * Obtener un agente Telegram por sessionName
+     */
+    @GetMapping("/session/{sessionName}")
+    public ResponseEntity<?> getAgentBySessionName(@PathVariable String sessionName) {
+        try {
+            logger.info("GET /api/agents/telegram/session/{} - Fetching Telegram agent by session name", sessionName);
+            
+            TelegramAgentResponse agent = agentTelegramService.getAgentBySessionName(sessionName);
+            
+            return ResponseEntity.ok(agent);
+            
+        } catch (Exception e) {
+            logger.error("Error fetching Telegram agent by session name {}: {}", sessionName, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    /**
      * Obtener el token del bot para uso en workflows
      * Este endpoint puede ser llamado por n8n para obtener el token necesario
      */

@@ -19,6 +19,8 @@ public class CreateTelegramAgentRequest {
     
     private String botName;
     
+    private String sessionName;
+    
     // Campos para soporte de múltiples workflows
     private List<String> workflowIds;
     
@@ -70,6 +72,14 @@ public class CreateTelegramAgentRequest {
         this.botName = botName;
     }
     
+    public String getSessionName() {
+        return sessionName;
+    }
+    
+    public void setSessionName(String sessionName) {
+        this.sessionName = sessionName;
+    }
+    
     public List<String> getWorkflowIds() {
         return workflowIds;
     }
@@ -109,6 +119,7 @@ public class CreateTelegramAgentRequest {
                 ", description='" + description + '\'' +
                 ", prompt='" + prompt + '\'' +
                 ", botName='" + botName + '\'' +
+                ", sessionName='" + sessionName + '\'' +
                 ", workflowIds=" + workflowIds +
                 ", primaryWorkflowId='" + primaryWorkflowId + '\'' +
                 ", platformConfig='" + platformConfig + '\'' +

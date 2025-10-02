@@ -44,12 +44,19 @@ public class AgentTelegramService {
                 throw new RuntimeException("Error al crear el agente telegram: El bot " + request.getBotName() + " ya está en uso");
             }
             
+            // Verificar si ya existe un agente con ese session name
+            if (request.getSessionName() != null && 
+                agentTelegramRepository.existsBySessionName(request.getSessionName())) {
+                throw new RuntimeException("Error al crear el agente telegram: La sesión " + request.getSessionName() + " ya está en uso");
+            }
+            
             // Crear la entidad AgentTelegram
             AgentTelegram agent = new AgentTelegram();
             agent.setName(request.getName());
             agent.setDescription(request.getDescription());
             agent.setPrompt(request.getPrompt());
             agent.setBotName(request.getBotName());
+            agent.setSessionName(request.getSessionName());
             
             // Procesar platformConfig - asegurar que es un JSON válido y extraer el botToken
             String botToken = null;
@@ -159,6 +166,27 @@ public class AgentTelegramService {
         } catch (Exception e) {
             logger.error("Error fetching Telegram agent by botName {}: {}", botName, e.getMessage(), e);
             throw new RuntimeException("Error al obtener el agente Telegram por botName");
+        }
+    }
+    
+    /**
+     * Obtener un agente Telegram por sessionName
+     */
+    @Transactional(readOnly = true)
+    public TelegramAgentResponse getAgentBySessionName(String sessionName) {
+        try {
+            logger.info("Searching for Telegram agent with sessionName: {}", sessionName);
+            AgentTelegram agent = agentTelegramRepository.findBySessionName(sessionName);
+            if (agent != null) {
+                logger.info("Found Telegram agent: {} (ID: {})", agent.getName(), agent.getId());
+                return new TelegramAgentResponse(agent);
+            } else {
+                logger.warn("No Telegram agent found with sessionName: {}", sessionName);
+                throw new RuntimeException("Agente Telegram no encontrado con sessionName: " + sessionName);
+            }
+        } catch (Exception e) {
+            logger.error("Error fetching Telegram agent by sessionName {}: {}", sessionName, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener el agente Telegram por sessionName");
         }
     }
     

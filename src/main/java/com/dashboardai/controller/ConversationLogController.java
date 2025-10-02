@@ -2,6 +2,7 @@ package com.dashboardai.controller;
 
 import com.dashboardai.dto.request.CreateConversationLogRequest;
 import com.dashboardai.dto.response.ConversationLogResponse;
+import com.dashboardai.dto.response.ConversationSessionStatsResponse;
 import com.dashboardai.dto.response.MessageResponse;
 import com.dashboardai.entity.ConversationLog;
 import com.dashboardai.service.ConversationLogService;
@@ -401,7 +402,7 @@ public class ConversationLogController {
         try {
             logger.info("GET /api/conversation-logs/sessions/stats - Fetching conversation sessions statistics");
             
-            List<Object[]> stats = conversationLogService.getConversationSessionsSummary();
+            List<ConversationSessionStatsResponse> stats = conversationLogService.getConversationSessionsSummary();
             
             return ResponseEntity.ok(new GetConversationStatsResponseWrapper(true, stats, null));
             
@@ -495,10 +496,10 @@ public class ConversationLogController {
     
     public static class GetConversationStatsResponseWrapper {
         private boolean success;
-        private List<Object[]> data;
+        private List<ConversationSessionStatsResponse> data;
         private String error;
         
-        public GetConversationStatsResponseWrapper(boolean success, List<Object[]> data, String error) {
+        public GetConversationStatsResponseWrapper(boolean success, List<ConversationSessionStatsResponse> data, String error) {
             this.success = success;
             this.data = data;
             this.error = error;
@@ -507,8 +508,8 @@ public class ConversationLogController {
         // Getters and setters
         public boolean isSuccess() { return success; }
         public void setSuccess(boolean success) { this.success = success; }
-        public List<Object[]> getData() { return data; }
-        public void setData(List<Object[]> data) { this.data = data; }
+        public List<ConversationSessionStatsResponse> getData() { return data; }
+        public void setData(List<ConversationSessionStatsResponse> data) { this.data = data; }
         public String getError() { return error; }
         public void setError(String error) { this.error = error; }
     }

@@ -40,6 +40,9 @@ public class AgentTelegram {
     @Column(name = "bot_token", length = 512)
     private String botToken;
     
+    @Column(name = "session_name", length = 255)
+    private String sessionName;
+    
     @Column(name = "platform_config", columnDefinition = "jsonb")
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String platformConfig;
@@ -142,6 +145,14 @@ public class AgentTelegram {
     
     public void setBotToken(String botToken) {
         this.botToken = botToken;
+    }
+    
+    public String getSessionName() {
+        return sessionName;
+    }
+    
+    public void setSessionName(String sessionName) {
+        this.sessionName = sessionName;
     }
     
     public String getPlatformConfig() {

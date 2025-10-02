@@ -56,12 +56,29 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
     @Query("SELECT cl FROM ConversationLog cl WHERE LOWER(cl.aiResponse) LIKE LOWER(CONCAT('%', :searchText, '%')) ORDER BY cl.createdAt DESC")
     List<ConversationLog> findByAiResponseContainingIgnoreCase(@Param("searchText") String searchText);
     
-    // Obtener estadísticas de conversación por sesión
-    @Query("SELECT cl.sessionName, COUNT(cl), MIN(cl.createdAt), MAX(cl.createdAt) " +
+    // Obtener estadísticas de conversación por sesión con nombre del agente
+    @Query("SELECT cl.sessionName, COUNT(cl), MIN(cl.createdAt), MAX(cl.createdAt), " +
+           "COALESCE(aw.name, at.name, 'Agente sin nombre') as agentName, " +
+           "CASE WHEN aw.sessionName IS NOT NULL THEN 'whatsapp' " +
+           "     WHEN at.sessionName IS NOT NULL THEN 'telegram' " +
+           "     ELSE LOWER(cl.platform) END as platform " +
            "FROM ConversationLog cl " +
-           "GROUP BY cl.sessionName " +
+           "LEFT JOIN AgentWhatsApp aw ON cl.sessionName = aw.sessionName " +
+           "LEFT JOIN AgentTelegram at ON cl.sessionName = at.sessionName " +
+           "GROUP BY cl.sessionName, aw.name, at.name, aw.sessionName, at.sessionName, cl.platform " +
            "ORDER BY MAX(cl.createdAt) DESC")
     List<Object[]> getConversationStatsBySession();
+    
+    // Query de debug para verificar los session names
+    @Query("SELECT DISTINCT cl.sessionName, cl.platform FROM ConversationLog cl ORDER BY cl.sessionName")
+    List<Object[]> getDistinctSessionNames();
+    
+    // Query de debug para verificar joins con agentes de telegram
+    @Query("SELECT cl.sessionName, cl.platform, at.sessionName as agentSessionName, at.name as agentName " +
+           "FROM ConversationLog cl " +
+           "LEFT JOIN AgentTelegram at ON cl.sessionName = at.sessionName " +
+           "WHERE cl.platform = 'telegram' OR LOWER(cl.sessionName) LIKE '%telegram%'")
+    List<Object[]> debugTelegramJoins();
     
     // Eliminar logs antiguos (más de X días)
     @Query("DELETE FROM ConversationLog cl WHERE cl.createdAt < :cutoffDate")

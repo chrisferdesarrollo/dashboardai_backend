@@ -26,6 +26,9 @@ public interface AgentTelegramRepository extends JpaRepository<AgentTelegram, UU
     // Buscar por bot name
     AgentTelegram findByBotName(String botName);
     
+    // Buscar por session name
+    AgentTelegram findBySessionName(String sessionName);
+    
     // Contar agentes activos
     @Query("SELECT COUNT(a) FROM AgentTelegram a WHERE a.status = 'active'")
     Long countActiveAgents();
@@ -39,4 +42,7 @@ public interface AgentTelegramRepository extends JpaRepository<AgentTelegram, UU
     
     // Verificar si existe un agente con ese bot name
     boolean existsByBotName(String botName);
+    
+    // Verificar si existe un agente con ese session name
+    boolean existsBySessionName(String sessionName);
 }
