@@ -427,6 +427,25 @@ public class ConversationLogController {
                     .body(new GetConversationStatsResponseWrapper(false, null, e.getMessage()));
         }
     }
+
+    /**
+     * Obtener estadísticas de conversaciones por sesión SIN FILTRO (para testing)
+     */
+    @GetMapping("/sessions/stats/all")
+    public ResponseEntity<?> getAllConversationSessionsStats() {
+        try {
+            logger.info("GET /api/conversation-logs/sessions/stats/all - Fetching ALL conversation sessions statistics");
+            
+            List<ConversationSessionStatsResponse> stats = conversationLogService.getConversationSessionsSummary();
+            
+            return ResponseEntity.ok(new GetConversationStatsResponseWrapper(true, stats, null));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching ALL conversation sessions stats: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new GetConversationStatsResponseWrapper(false, null, e.getMessage()));
+        }
+    }
     
     // Response Wrapper Classes
     public static class CreateConversationLogResponseWrapper {

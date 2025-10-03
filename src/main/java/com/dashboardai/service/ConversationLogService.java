@@ -29,8 +29,6 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName) {
         try {
-            logger.info("Saving conversation log for session: {}, user: {}", sessionName, userName);
-            
             ConversationLog conversationLog = new ConversationLog();
             conversationLog.setSessionName(sessionName);
             conversationLog.setUserMessage(userMessage);
@@ -40,7 +38,6 @@ public class ConversationLogService {
             
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -54,8 +51,6 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, ZonedDateTime timestamp) {
         try {
-            logger.info("Saving conversation log with custom timestamp for session: {}, user: {}", sessionName, userName);
-            
             ConversationLog conversationLog = new ConversationLog();
             conversationLog.setSessionName(sessionName);
             conversationLog.setUserMessage(userMessage);
@@ -65,7 +60,6 @@ public class ConversationLogService {
             
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log with custom timestamp saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -79,8 +73,6 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone) {
         try {
-            logger.info("Saving conversation log for session: {}, user: {}, phone: {}", sessionName, userName, userPhone);
-            
             ConversationLog conversationLog = new ConversationLog();
             conversationLog.setSessionName(sessionName);
             conversationLog.setUserMessage(userMessage);
@@ -91,7 +83,6 @@ public class ConversationLogService {
             
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -105,8 +96,6 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, ZonedDateTime timestamp) {
         try {
-            logger.info("Saving conversation log with custom timestamp for session: {}, user: {}, phone: {}", sessionName, userName, userPhone);
-            
             ConversationLog conversationLog = new ConversationLog();
             conversationLog.setSessionName(sessionName);
             conversationLog.setUserMessage(userMessage);
@@ -117,7 +106,6 @@ public class ConversationLogService {
             
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log with custom timestamp saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -131,8 +119,6 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, String platform) {
         try {
-            logger.info("Saving conversation log for session: {}, user: {}, phone: {}, platform: {}", sessionName, userName, userPhone, platform);
-            
             ConversationLog conversationLog = new ConversationLog();
             conversationLog.setSessionName(sessionName);
             conversationLog.setUserMessage(userMessage);
@@ -144,7 +130,6 @@ public class ConversationLogService {
             
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -158,8 +143,6 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(String sessionName, String userMessage, String aiResponse, String userName, String userPhone, String platform, ZonedDateTime timestamp) {
         try {
-            logger.info("Saving conversation log with custom timestamp for session: {}, user: {}, phone: {}, platform: {}", sessionName, userName, userPhone, platform);
-            
             ConversationLog conversationLog = new ConversationLog();
             conversationLog.setSessionName(sessionName);
             conversationLog.setUserMessage(userMessage);
@@ -171,7 +154,6 @@ public class ConversationLogService {
             
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log with custom timestamp saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -185,11 +167,8 @@ public class ConversationLogService {
      */
     public ConversationLog saveConversationLog(ConversationLog conversationLog) {
         try {
-            logger.info("Saving conversation log entity for session: {}", conversationLog.getSessionName());
-            
             ConversationLog savedLog = conversationLogRepository.save(conversationLog);
             
-            logger.info("Conversation log entity saved successfully with ID: {}", savedLog.getId());
             return savedLog;
             
         } catch (Exception e) {
@@ -204,7 +183,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> getAllConversationLogs() {
         try {
-            logger.info("Fetching all conversation logs");
             return conversationLogRepository.findAll();
         } catch (Exception e) {
             logger.error("Error fetching all conversation logs: {}", e.getMessage(), e);
@@ -218,9 +196,7 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> getConversationLogsByPlatform(String platform) {
         try {
-            logger.info("Fetching conversation logs for platform: {}", platform);
             List<ConversationLog> logs = conversationLogRepository.findByPlatformOrderByCreatedAtDesc(platform);
-            logger.info("Found {} logs for platform: {}", logs.size(), platform);
             return logs;
         } catch (Exception e) {
             logger.error("Error fetching conversation logs for platform {}: {}", platform, e.getMessage(), e);
@@ -234,7 +210,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> getConversationLogsBySession(String sessionName) {
         try {
-            logger.info("Fetching conversation logs for session: {}", sessionName);
             return conversationLogRepository.findBySessionNameOrderByCreatedAtAsc(sessionName);
         } catch (Exception e) {
             logger.error("Error fetching conversation logs for session {}: {}", sessionName, e.getMessage(), e);
@@ -248,7 +223,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> getConversationLogsByUser(String userName) {
         try {
-            logger.info("Fetching conversation logs for user: {}", userName);
             return conversationLogRepository.findByUserName(userName);
         } catch (Exception e) {
             logger.error("Error fetching conversation logs for user {}: {}", userName, e.getMessage(), e);
@@ -262,7 +236,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public ConversationLog getConversationLogById(UUID logId) {
         try {
-            logger.info("Fetching conversation log with ID: {}", logId);
             Optional<ConversationLog> log = conversationLogRepository.findById(logId);
             if (log.isPresent()) {
                 return log.get();
@@ -281,7 +254,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> getRecentConversationLogs() {
         try {
-            logger.info("Fetching recent conversation logs (last 24 hours)");
             ZonedDateTime since = ZonedDateTime.now().minusHours(24);
             return conversationLogRepository.findRecentLogs(since);
         } catch (Exception e) {
@@ -296,7 +268,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> getConversationLogsBySessionAndDateRange(String sessionName, ZonedDateTime startDate, ZonedDateTime endDate) {
         try {
-            logger.info("Fetching conversation logs for session {} between {} and {}", sessionName, startDate, endDate);
             return conversationLogRepository.findBySessionNameAndCreatedAtBetween(sessionName, startDate, endDate);
         } catch (Exception e) {
             logger.error("Error fetching conversation logs for session {} in date range: {}", sessionName, e.getMessage(), e);
@@ -310,7 +281,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> searchInUserMessages(String searchText) {
         try {
-            logger.info("Searching for text '{}' in user messages", searchText);
             return conversationLogRepository.findByUserMessageContainingIgnoreCase(searchText);
         } catch (Exception e) {
             logger.error("Error searching in user messages: {}", e.getMessage(), e);
@@ -324,7 +294,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationLog> searchInAiResponses(String searchText) {
         try {
-            logger.info("Searching for text '{}' in AI responses", searchText);
             return conversationLogRepository.findByAiResponseContainingIgnoreCase(searchText);
         } catch (Exception e) {
             logger.error("Error searching in AI responses: {}", e.getMessage(), e);
@@ -338,7 +307,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public Long countMessagesBySession(String sessionName) {
         try {
-            logger.info("Counting messages for session: {}", sessionName);
             return conversationLogRepository.countBySessionName(sessionName);
         } catch (Exception e) {
             logger.error("Error counting messages for session {}: {}", sessionName, e.getMessage(), e);
@@ -352,7 +320,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<String> getSessionsByUser(String userName) {
         try {
-            logger.info("Fetching unique sessions for user: {}", userName);
             return conversationLogRepository.findDistinctSessionNamesByUserName(userName);
         } catch (Exception e) {
             logger.error("Error fetching sessions for user {}: {}", userName, e.getMessage(), e);
@@ -366,7 +333,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public ConversationLog getLastLogBySession(String sessionName) {
         try {
-            logger.info("Fetching last log for session: {}", sessionName);
             return conversationLogRepository.findLastBySessionName(sessionName);
         } catch (Exception e) {
             logger.error("Error fetching last log for session {}: {}", sessionName, e.getMessage(), e);
@@ -380,7 +346,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public boolean existsLogForSession(String sessionName) {
         try {
-            logger.info("Checking if logs exist for session: {}", sessionName);
             return conversationLogRepository.existsBySessionName(sessionName);
         } catch (Exception e) {
             logger.error("Error checking if logs exist for session {}: {}", sessionName, e.getMessage(), e);
@@ -393,10 +358,8 @@ public class ConversationLogService {
      */
     public void deleteOldLogs(int daysToKeep) {
         try {
-            logger.info("Deleting logs older than {} days", daysToKeep);
             ZonedDateTime cutoffDate = ZonedDateTime.now().minusDays(daysToKeep);
             conversationLogRepository.deleteOldLogs(cutoffDate);
-            logger.info("Old logs deleted successfully");
         } catch (Exception e) {
             logger.error("Error deleting old logs: {}", e.getMessage(), e);
             throw new RuntimeException("Error al eliminar logs antiguos");
@@ -408,14 +371,11 @@ public class ConversationLogService {
      */
     public void deleteConversationLog(UUID logId) {
         try {
-            logger.info("Deleting conversation log with ID: {}", logId);
-            
             if (!conversationLogRepository.existsById(logId)) {
                 throw new RuntimeException("Log de conversación no encontrado");
             }
             
             conversationLogRepository.deleteById(logId);
-            logger.info("Conversation log deleted successfully");
             
         } catch (Exception e) {
             logger.error("Error deleting conversation log {}: {}", logId, e.getMessage(), e);
@@ -429,23 +389,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationSessionStatsResponse> getConversationSessionsSummary() {
         try {
-            logger.info("Fetching conversation sessions summary with agent names");
-            
-            // Debug: verificar session names disponibles
-            List<Object[]> sessionNames = conversationLogRepository.getDistinctSessionNames();
-            logger.info("Available session names in conversation_logs:");
-            for (Object[] session : sessionNames) {
-                logger.info("SessionName: {}, Platform: {}", session[0], session[1]);
-            }
-            
-            // Debug: verificar joins con telegram
-            List<Object[]> telegramJoins = conversationLogRepository.debugTelegramJoins();
-            logger.info("Telegram joins debug:");
-            for (Object[] join : telegramJoins) {
-                logger.info("ConversationSessionName: {}, Platform: {}, AgentSessionName: {}, AgentName: {}", 
-                           join[0], join[1], join[2], join[3]);
-            }
-            
             List<Object[]> rawResults = conversationLogRepository.getConversationStatsBySession();
             
             return rawResults.stream()
@@ -470,7 +413,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<ConversationSessionStatsResponse> getConversationSessionsSummaryByUserId(Long userId) {
         try {
-            logger.info("Fetching conversation sessions summary with agent names for userId: {}", userId);
             List<Object[]> rawResults = conversationLogRepository.getConversationStatsBySessionAndUserId(userId);
             
             return rawResults.stream()
@@ -495,7 +437,6 @@ public class ConversationLogService {
     @Transactional(readOnly = true)
     public List<String> getAllUniqueSessions() {
         try {
-            logger.info("Fetching all unique session names");
             return conversationLogRepository.findAll()
                     .stream()
                     .map(ConversationLog::getSessionName)
