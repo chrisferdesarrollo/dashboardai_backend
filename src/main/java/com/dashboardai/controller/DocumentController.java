@@ -66,23 +66,6 @@ public class DocumentController {
     }
     
     /**
-     * Obtener estadísticas de documentos
-     */
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getDocumentStats() {
-        try {
-            logger.info("GET /api/documents/stats");
-            
-            Map<String, Object> stats = documentService.getDocumentStats();
-            return ResponseEntity.ok(stats);
-            
-        } catch (Exception e) {
-            logger.error("Error obteniendo estadísticas de documentos: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    /**
      * Obtener todos los documentos con paginación
      */
     @GetMapping
@@ -269,6 +252,23 @@ public class DocumentController {
             logger.error("Error actualizando estado del documento {}: {}", id, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new MessageResponse("Error interno del servidor"));
+        }
+    }
+    
+    /**
+     * Obtener estadísticas de documentos
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getDocumentStats() {
+        try {
+            logger.info("GET /api/documents/stats");
+            
+            Map<String, Object> stats = documentService.getDocumentStats();
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            logger.error("Error obteniendo estadísticas: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
