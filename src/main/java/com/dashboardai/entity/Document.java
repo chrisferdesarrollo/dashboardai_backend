@@ -27,23 +27,14 @@ public class Document {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     
-    @Column(name = "original_filename", nullable = false, length = 255)
-    private String originalFilename;
-    
     @Column(name = "file_type", nullable = false, length = 50)
     private String fileType;
-    
-    @Column(name = "file_size", nullable = false)
-    private Long fileSize;
     
     @Column(name = "tags", columnDefinition = "text[]")
     private String[] tags;
     
     @Column(name = "agent_id")
     private UUID agentId;
-    
-    @Column(name = "file_path", nullable = false, length = 500)
-    private String filePath;
     
     @Column(name = "upload_date", nullable = false)
     private LocalDateTime uploadDate;
@@ -102,28 +93,12 @@ public class Document {
         this.description = description;
     }
     
-    public String getOriginalFilename() {
-        return originalFilename;
-    }
-    
-    public void setOriginalFilename(String originalFilename) {
-        this.originalFilename = originalFilename;
-    }
-    
     public String getFileType() {
         return fileType;
     }
     
     public void setFileType(String fileType) {
         this.fileType = fileType;
-    }
-    
-    public Long getFileSize() {
-        return fileSize;
-    }
-    
-    public void setFileSize(Long fileSize) {
-        this.fileSize = fileSize;
     }
     
     public String[] getTags() {
@@ -140,14 +115,6 @@ public class Document {
     
     public void setAgentId(UUID agentId) {
         this.agentId = agentId;
-    }
-    
-    public String getFilePath() {
-        return filePath;
-    }
-    
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
     }
     
     public LocalDateTime getUploadDate() {
@@ -200,9 +167,7 @@ public class Document {
         return "Document{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
-                ", originalFilename='" + originalFilename + '\'' +
                 ", fileType='" + fileType + '\'' +
-                ", fileSize=" + fileSize +
                 ", agentId=" + agentId +
                 ", processed=" + processed +
                 ", processingStatus=" + processingStatus +

@@ -9,12 +9,9 @@ CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    original_filename VARCHAR(255) NOT NULL,
     file_type VARCHAR(50) NOT NULL,
-    file_size BIGINT NOT NULL,
     tags TEXT[], -- Array de tags para organización
     agent_id UUID, -- ID del agente específico para entrenar (opcional)
-    file_path VARCHAR(500) NOT NULL, -- Ruta donde se almacena el archivo
     upload_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     processed BOOLEAN DEFAULT FALSE, -- Indica si ya fue procesado por N8N
     processing_status VARCHAR(50) DEFAULT 'pending', -- pending, processing, completed, failed

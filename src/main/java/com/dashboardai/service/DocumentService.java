@@ -1,24 +1,26 @@
 package com.dashboardai.service;
 
+import com.dashboardai.dto.request.CreateDocumentRequest;
+import com.dashboardai.dto.response.DocumentResponse;
 import com.dashboardai.entity.Document;
 import com.dashboardai.repository.DocumentRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentService {
@@ -31,14 +33,11 @@ public class DocumentService {
     @Autowired
     private RestTemplate restTemplate;
     
-    @Value("${app.upload.dir:uploads}")
-    private String uploadDir;
-    
     @Value("${app.n8n.webhook.documents:https://n8n.topias.app/webhook/documents-api}")
     private String n8nWebhookUrl;
     
     // Tipos de archivo permitidos
-    private static final Set<String> ALLOWED_FILE_TYPES = Set.of(
+    private static final Set<String> ALLOWED_TYPES = Set.of(
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -48,268 +47,248 @@ public class DocumentService {
         "application/csv"
     );
     
-    // Extensiones permitidas
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-        "pdf", "doc", "docx", "txt", "md", "csv"
-    );
-    
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    // Tamaño máximo: 10MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
     
     /**
-     * Subir un nuevo documento
+     * Procesar documento enviándolo directamente a N8N para vectorización
      */
-    public Document uploadDocument(MultipartFile file, String name, String description, 
-                                 List<String> tags, UUID agentId) throws IOException {
+    public DocumentResponse processDocumentForVectorization(MultipartFile file, CreateDocumentRequest request, String authToken) {
         
-        logger.info("Iniciando subida de documento: {}", name);
-        
-        // Validaciones
+        // Validar archivo
         validateFile(file);
         
-        // Crear directorio de uploads si no existe
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-        
-        // Generar nombre único para el archivo
-        String originalFilename = file.getOriginalFilename();
-        String fileExtension = getFileExtension(originalFilename);
-        String uniqueFilename = UUID.randomUUID().toString() + "." + fileExtension;
-        Path filePath = uploadPath.resolve(uniqueFilename);
-        
-        // Guardar archivo
-        Files.copy(file.getInputStream(), filePath);
-        logger.info("Archivo guardado en: {}", filePath.toString());
-        
-        // Crear entidad Document
+        // Crear registro en BD con metadatos
         Document document = new Document();
-        document.setName(name);
-        document.setDescription(description);
-        document.setOriginalFilename(originalFilename);
+        document.setName(request.getName());
+        document.setDescription(request.getDescription());
         document.setFileType(file.getContentType());
-        document.setFileSize(file.getSize());
-        document.setTags(tags != null ? tags.toArray(new String[0]) : new String[0]);
-        document.setAgentId(agentId);
-        document.setFilePath(filePath.toString());
+        document.setTags(request.getTags() != null ? request.getTags().toArray(new String[0]) : null);
+        document.setAgentId(request.getAgentId());
+        document.setProcessed(false);
         document.setProcessingStatus(Document.ProcessingStatus.PENDING);
         
-        // Guardar en base de datos
-        Document savedDocument = documentRepository.save(document);
-        logger.info("Documento guardado en BD con ID: {}", savedDocument.getId());
+        // Guardar en BD
+        document = documentRepository.save(document);
+        logger.info("Document metadata saved with ID: {}", document.getId());
         
-        // Enviar a N8N para procesamiento asíncrono
+        // Enviar a N8N de forma asíncrona
         try {
-            sendToN8nWebhook(savedDocument);
-        } catch (Exception e) {
-            logger.error("Error enviando documento a N8N: {}", e.getMessage());
-            // No fallar la subida si hay error en N8N, solo marcar como fallido
-            savedDocument.setProcessingStatus(Document.ProcessingStatus.FAILED);
-            documentRepository.save(savedDocument);
-        }
-        
-        return savedDocument;
-    }
-    
-    /**
-     * Validar archivo subido
-     */
-    private void validateFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("El archivo no puede estar vacío");
-        }
-        
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("El archivo excede el tamaño máximo permitido (10MB)");
-        }
-        
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_FILE_TYPES.contains(contentType)) {
-            String originalFilename = file.getOriginalFilename();
-            String extension = getFileExtension(originalFilename);
-            if (!ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
-                throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos soportados: PDF, Word, TXT, MD, CSV");
-            }
-        }
-    }
-    
-    /**
-     * Obtener extensión del archivo
-     */
-    private String getFileExtension(String filename) {
-        if (filename == null || filename.lastIndexOf('.') == -1) {
-            return "";
-        }
-        return filename.substring(filename.lastIndexOf('.') + 1);
-    }
-    
-    /**
-     * Enviar documento a webhook de N8N para procesamiento
-     */
-    private void sendToN8nWebhook(Document document) {
-        try {
-            logger.info("Enviando documento {} a N8N webhook", document.getId());
+            sendToN8nWebhook(file, document, authToken);
             
-            // Actualizar estado a processing
+            // Actualizar estado a "procesando"
             document.setProcessingStatus(Document.ProcessingStatus.PROCESSING);
             documentRepository.save(document);
             
-            // Preparar payload para N8N
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("documentId", document.getId().toString());
-            payload.put("name", document.getName());
-            payload.put("description", document.getDescription());
-            payload.put("originalFilename", document.getOriginalFilename());
-            payload.put("fileType", document.getFileType());
-            payload.put("fileSize", document.getFileSize());
-            payload.put("tags", document.getTags());
-            payload.put("agentId", document.getAgentId() != null ? document.getAgentId().toString() : null);
-            payload.put("filePath", document.getFilePath());
-            payload.put("uploadDate", document.getUploadDate().toString());
-            
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
-            
-            ResponseEntity<String> response = restTemplate.postForEntity(n8nWebhookUrl, request, String.class);
-            
-            if (response.getStatusCode().is2xxSuccessful()) {
-                logger.info("Documento {} enviado exitosamente a N8N", document.getId());
-            } else {
-                logger.error("Error enviando documento a N8N. Status: {}", response.getStatusCode());
-                throw new RestClientException("N8N webhook respondió con status: " + response.getStatusCode());
-            }
-            
         } catch (Exception e) {
-            logger.error("Error enviando documento a N8N webhook: {}", e.getMessage());
+            logger.error("Error sending document to N8N: {}", e.getMessage(), e);
+            
+            // Marcar como fallido
             document.setProcessingStatus(Document.ProcessingStatus.FAILED);
             documentRepository.save(document);
-            throw e;
+            
+            throw new RuntimeException("Error enviando documento a N8N: " + e.getMessage());
+        }
+        
+        return DocumentResponse.fromEntity(document);
+    }
+    
+    /**
+     * Enviar documento al webhook de N8N
+     */
+    private void sendToN8nWebhook(MultipartFile file, Document document, String authToken) throws Exception {
+        
+        // Crear objeto con metadatos para el body
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("documentId", document.getId().toString());
+        requestBody.put("name", document.getName());
+        requestBody.put("description", document.getDescription() != null ? document.getDescription() : "");
+        requestBody.put("fileType", document.getFileType());
+        requestBody.put("agentId", document.getAgentId() != null ? document.getAgentId().toString() : "");
+        if (document.getTags() != null) {
+            requestBody.put("tags", String.join(",", document.getTags()));
+        }
+        
+        // Agregar archivo como base64 al body
+        requestBody.put("fileContent", Base64.getEncoder().encodeToString(file.getBytes()));
+        requestBody.put("fileName", file.getOriginalFilename());
+        
+        // Limpiar token
+        String cleanToken = "";
+        if (authToken != null && !authToken.isEmpty()) {
+            if (authToken.startsWith("Bearer ")) {
+                cleanToken = authToken.substring(7);
+            } else {
+                cleanToken = authToken;
+            }
+        }
+        
+        // Configurar headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        if (!cleanToken.isEmpty()) {
+            headers.set("Authorization", "Bearer " + cleanToken);
+        }
+        
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+        
+        // Enviar request
+        logger.info("Sending document with metadata in body to N8N webhook: {}", n8nWebhookUrl);
+        logger.info("Metadata in body: documentId={}, name={}", document.getId(), document.getName());
+        ResponseEntity<String> response = restTemplate.postForEntity(n8nWebhookUrl, requestEntity, String.class);
+        
+        if (response.getStatusCode().is2xxSuccessful()) {
+            logger.info("Document sent successfully to N8N for document ID: {}", document.getId());
+        } else {
+            throw new RuntimeException("N8N webhook returned status: " + response.getStatusCode());
         }
     }
     
     /**
-     * Obtener todos los documentos con paginación
+     * Validar archivo
      */
-    public Page<Document> getAllDocuments(Pageable pageable) {
-        return documentRepository.findAllByOrderByUploadDateDesc(pageable);
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("El archivo es requerido");
+        }
+        
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("El archivo excede el tamaño máximo de 10MB");
+        }
+        
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos soportados: PDF, Word, TXT, MD, CSV");
+        }
+    }
+    
+    
+    /**
+     * Actualizar estado de procesamiento desde N8N
+     */
+    public void updateProcessingStatus(UUID documentId, String status, String error) {
+        Optional<Document> optDocument = documentRepository.findById(documentId);
+        if (optDocument.isPresent()) {
+            Document document = optDocument.get();
+            
+            switch (status.toLowerCase()) {
+                case "success":
+                case "completed":
+                    document.setProcessingStatus(Document.ProcessingStatus.COMPLETED);
+                    document.setProcessed(true);
+                    break;
+                case "failed":
+                case "error":
+                    document.setProcessingStatus(Document.ProcessingStatus.FAILED);
+                    document.setProcessed(false);
+                    if (error != null) {
+                        logger.error("Document processing failed for ID {}: {}", documentId, error);
+                    }
+                    break;
+                default:
+                    logger.warn("Unknown processing status received: {}", status);
+                    return;
+            }
+            
+            documentRepository.save(document);
+            logger.info("Updated document {} processing status to: {}", documentId, status);
+        } else {
+            logger.error("Document not found for ID: {}", documentId);
+            throw new RuntimeException("Document not found: " + documentId);
+        }
     }
     
     /**
-     * Obtener documento por ID
+     * Obtener todos los documentos
      */
-    public Optional<Document> getDocumentById(UUID id) {
-        return documentRepository.findById(id);
+    public List<DocumentResponse> getAllDocuments() {
+        return documentRepository.findAllByOrderByUploadDateDesc()
+                .stream()
+                .map(DocumentResponse::fromEntity)
+                .collect(Collectors.toList());
     }
     
     /**
      * Obtener documentos por agente
      */
-    public List<Document> getDocumentsByAgent(UUID agentId) {
-        return documentRepository.findByAgentId(agentId);
+    public List<DocumentResponse> getDocumentsByAgent(UUID agentId) {
+        return documentRepository.findByAgentId(agentId)
+                .stream()
+                .map(DocumentResponse::fromEntity)
+                .collect(Collectors.toList());
     }
     
     /**
-     * Obtener documentos por agente con paginación
+     * Obtener documento por ID
      */
-    public Page<Document> getDocumentsByAgent(UUID agentId, Pageable pageable) {
-        return documentRepository.findByAgentId(agentId, pageable);
-    }
-    
-    /**
-     * Buscar documentos por término
-     */
-    public List<Document> searchDocuments(String query) {
-        return documentRepository.findByNameOrDescriptionContainingIgnoreCase(query);
-    }
-    
-    /**
-     * Obtener documentos por tag
-     */
-    public List<Document> getDocumentsByTag(String tag) {
-        return documentRepository.findByTagsContaining(tag);
-    }
-    
-    /**
-     * Actualizar metadatos del documento
-     */
-    public Document updateDocument(UUID id, String name, String description, 
-                                 List<String> tags, UUID agentId) {
-        Optional<Document> optionalDocument = documentRepository.findById(id);
-        if (optionalDocument.isEmpty()) {
-            throw new IllegalArgumentException("Documento no encontrado");
+    public DocumentResponse getDocumentById(UUID id) {
+        Optional<Document> document = documentRepository.findById(id);
+        if (document.isEmpty()) {
+            throw new RuntimeException("Documento no encontrado");
         }
-        
-        Document document = optionalDocument.get();
-        if (name != null) document.setName(name);
-        if (description != null) document.setDescription(description);
-        if (tags != null) document.setTags(tags.toArray(new String[0]));
-        if (agentId != null) document.setAgentId(agentId);
-        
-        return documentRepository.save(document);
+        return DocumentResponse.fromEntity(document.get());
     }
     
     /**
      * Eliminar documento
      */
     public void deleteDocument(UUID id) {
-        Optional<Document> optionalDocument = documentRepository.findById(id);
-        if (optionalDocument.isEmpty()) {
-            throw new IllegalArgumentException("Documento no encontrado");
+        if (!documentRepository.existsById(id)) {
+            throw new RuntimeException("Documento no encontrado");
         }
-        
-        Document document = optionalDocument.get();
-        
-        // Eliminar archivo físico
-        try {
-            Path filePath = Paths.get(document.getFilePath());
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
-                logger.info("Archivo físico eliminado: {}", document.getFilePath());
-            }
-        } catch (IOException e) {
-            logger.error("Error eliminando archivo físico: {}", e.getMessage());
-        }
-        
-        // Eliminar de base de datos
-        documentRepository.delete(document);
-        logger.info("Documento {} eliminado de BD", id);
+        documentRepository.deleteById(id);
+        logger.info("Document deleted: {}", id);
     }
     
     /**
-     * Actualizar estado de procesamiento del documento (usado por N8N)
+     * Buscar documentos
      */
-    public void updateProcessingStatus(UUID documentId, Document.ProcessingStatus status) {
-        Optional<Document> optionalDocument = documentRepository.findById(documentId);
-        if (optionalDocument.isPresent()) {
-            Document document = optionalDocument.get();
-            document.setProcessingStatus(status);
-            if (status == Document.ProcessingStatus.COMPLETED) {
-                document.setProcessed(true);
-            }
-            documentRepository.save(document);
-            logger.info("Estado de procesamiento actualizado para documento {}: {}", documentId, status);
-        }
+    public List<DocumentResponse> searchDocuments(String query) {
+        return documentRepository.findByNameOrDescriptionContainingIgnoreCase(query)
+                .stream()
+                .map(DocumentResponse::fromEntity)
+                .collect(Collectors.toList());
     }
     
     /**
      * Obtener estadísticas de documentos
      */
-    public Map<String, Object> getDocumentStats() {
-        Map<String, Object> stats = new HashMap<>();
+    public com.dashboardai.dto.response.DocumentStats getDocumentStats() {
+        List<Document> documents = documentRepository.findAll();
         
-        long totalDocuments = documentRepository.count();
-        long processedDocuments = documentRepository.findByProcessed(true).size();
-        long pendingDocuments = documentRepository.findByProcessingStatus(Document.ProcessingStatus.PENDING).size();
-        long failedDocuments = documentRepository.findByProcessingStatus(Document.ProcessingStatus.FAILED).size();
+        long total = documents.size();
+        long processed = documents.stream()
+                .mapToLong(doc -> doc.getProcessed() ? 1 : 0)
+                .sum();
+        long pending = documents.stream()
+                .mapToLong(doc -> (doc.getProcessingStatus() == Document.ProcessingStatus.PENDING || 
+                                 doc.getProcessingStatus() == Document.ProcessingStatus.PROCESSING) ? 1 : 0)
+                .sum();
+        long failed = documents.stream()
+                .mapToLong(doc -> doc.getProcessingStatus() == Document.ProcessingStatus.FAILED ? 1 : 0)
+                .sum();
         
-        stats.put("total", totalDocuments);
-        stats.put("processed", processedDocuments);
-        stats.put("pending", pendingDocuments);
-        stats.put("failed", failedDocuments);
-        stats.put("successRate", totalDocuments > 0 ? (double) processedDocuments / totalDocuments * 100 : 0);
+        double successRate = total > 0 ? (double) processed / total * 100 : 0;
+        successRate = Math.round(successRate * 100.0) / 100.0; // Redondear a 2 decimales
         
-        return stats;
+        return new com.dashboardai.dto.response.DocumentStats(total, processed, pending, failed, successRate);
+    }
+    
+    /**
+     * Marcar documento como procesado (llamado por N8N)
+     */
+    public void markAsProcessed(UUID id) {
+        Optional<Document> documentOpt = documentRepository.findById(id);
+        if (documentOpt.isPresent()) {
+            Document document = documentOpt.get();
+            document.setProcessed(true);
+            document.setProcessingStatus(Document.ProcessingStatus.COMPLETED);
+            document.setUpdatedAt(LocalDateTime.now());
+            documentRepository.save(document);
+            logger.info("Document marked as processed: {}", id);
+        } else {
+            throw new RuntimeException("Documento no encontrado: " + id);
+        }
     }
 }

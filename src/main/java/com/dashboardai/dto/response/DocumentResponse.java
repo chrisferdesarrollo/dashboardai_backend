@@ -11,9 +11,7 @@ public class DocumentResponse {
     private UUID id;
     private String name;
     private String description;
-    private String originalFilename;
     private String fileType;
-    private Long fileSize;
     private List<String> tags;
     private UUID agentId;
     private LocalDateTime uploadDate;
@@ -29,9 +27,7 @@ public class DocumentResponse {
         this.id = document.getId();
         this.name = document.getName();
         this.description = document.getDescription();
-        this.originalFilename = document.getOriginalFilename();
         this.fileType = document.getFileType();
-        this.fileSize = document.getFileSize();
         this.tags = document.getTags() != null ? List.of(document.getTags()) : null;
         this.agentId = document.getAgentId();
         this.uploadDate = document.getUploadDate();
@@ -72,28 +68,12 @@ public class DocumentResponse {
         this.description = description;
     }
     
-    public String getOriginalFilename() {
-        return originalFilename;
-    }
-    
-    public void setOriginalFilename(String originalFilename) {
-        this.originalFilename = originalFilename;
-    }
-    
     public String getFileType() {
         return fileType;
     }
     
     public void setFileType(String fileType) {
         this.fileType = fileType;
-    }
-    
-    public Long getFileSize() {
-        return fileSize;
-    }
-    
-    public void setFileSize(Long fileSize) {
-        this.fileSize = fileSize;
     }
     
     public List<String> getTags() {

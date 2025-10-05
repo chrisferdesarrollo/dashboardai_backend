@@ -1,28 +1,19 @@
 package com.dashboardai.controller;
 
-import com.dashboardai.dto.request.UpdateDocumentRequest;
+import com.dashboardai.dto.request.CreateDocumentRequest;
 import com.dashboardai.dto.response.DocumentResponse;
 import com.dashboardai.dto.response.DocumentUploadResponse;
-import com.dashboardai.dto.response.MessageResponse;
-import com.dashboardai.entity.Document;
+import com.dashboardai.dto.response.DocumentStats;
 import com.dashboardai.service.DocumentService;
-import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -35,78 +26,66 @@ public class DocumentController {
     private DocumentService documentService;
     
     /**
-     * Subir un nuevo documento
+     * Subir documento y enviarlo automáticamente a N8N para vectorización
      */
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadDocument(
+    public ResponseEntity<DocumentUploadResponse> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("name") String name,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "tags", required = false) List<String> tags,
-            @RequestParam(value = "agentId", required = false) UUID agentId) {
+            @RequestParam(value = "tags", required = false) String[] tags,
+            @RequestParam(value = "agentId", required = false) UUID agentId,
+            @RequestParam(value = "authToken", required = false) String authToken,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         
         try {
-            logger.info("POST /api/documents/upload - Subiendo documento: {}", name);
+            logger.info("POST /api/documents/upload - Uploading document: {} ({})", 
+                       name, file.getOriginalFilename());
             
-            Document document = documentService.uploadDocument(file, name, description, tags, agentId);
-            DocumentResponse documentResponse = DocumentResponse.fromEntity(document);
-            
-            return ResponseEntity.ok(DocumentUploadResponse.success(documentResponse));
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("Error de validación al subir documento: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                .body(DocumentUploadResponse.error(e.getMessage()));
-                
-        } catch (Exception e) {
-            logger.error("Error interno al subir documento: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(DocumentUploadResponse.error("Error interno del servidor"));
-        }
-    }
-    
-    /**
-     * Obtener todos los documentos con paginación
-     */
-    @GetMapping
-    public ResponseEntity<Page<DocumentResponse>> getAllDocuments(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        
-        try {
-            logger.info("GET /api/documents - Página: {}, Tamaño: {}", page, size);
-            
-            Pageable pageable = PageRequest.of(page, size);
-            Page<Document> documents = documentService.getAllDocuments(pageable);
-            Page<DocumentResponse> response = documents.map(DocumentResponse::fromEntity);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            logger.error("Error obteniendo documentos: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    /**
-     * Obtener documento por ID
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getDocumentById(@PathVariable UUID id) {
-        try {
-            logger.info("GET /api/documents/{}", id);
-            
-            Optional<Document> document = documentService.getDocumentById(id);
-            if (document.isPresent()) {
-                return ResponseEntity.ok(DocumentResponse.fromEntity(document.get()));
-            } else {
-                return ResponseEntity.notFound().build();
+            // Usar token del FormData si está disponible, sino usar del header
+            String finalToken = authToken;
+            if (finalToken == null || finalToken.isEmpty()) {
+                finalToken = authHeader;
             }
             
+            logger.info("Token source - FormData: {}, Header: {}", 
+                       authToken != null ? "Present" : "Missing",
+                       authHeader != null ? "Present" : "Missing");
+            logger.info("Using token from: {}", 
+                       authToken != null ? "FormData" : "Header");
+            logger.info("Authorization header received: {}", authHeader != null ? "Present" : "Missing");
+            
+            // Crear request con metadatos
+            CreateDocumentRequest request = new CreateDocumentRequest();
+            request.setName(name);
+            request.setDescription(description);
+            request.setTags(tags != null ? List.of(tags) : null);
+            request.setAgentId(agentId);
+            
+            // Procesar documento y enviarlo a N8N
+            DocumentResponse response = documentService.processDocumentForVectorization(file, request, finalToken);
+            
+            return ResponseEntity.ok(DocumentUploadResponse.success(response));
+            
         } catch (Exception e) {
-            logger.error("Error obteniendo documento {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new MessageResponse("Error interno del servidor"));
+            logger.error("Error uploading document: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                .body(DocumentUploadResponse.error("Error al procesar el documento: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtener todos los documentos procesados
+     */
+    @GetMapping
+    public ResponseEntity<List<DocumentResponse>> getAllDocuments() {
+        try {
+            logger.info("GET /api/documents - Getting all documents");
+            List<DocumentResponse> documents = documentService.getAllDocuments();
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            logger.error("Error getting documents: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
         }
     }
     
@@ -116,92 +95,27 @@ public class DocumentController {
     @GetMapping("/agent/{agentId}")
     public ResponseEntity<List<DocumentResponse>> getDocumentsByAgent(@PathVariable UUID agentId) {
         try {
-            logger.info("GET /api/documents/agent/{}", agentId);
-            
-            List<Document> documents = documentService.getDocumentsByAgent(agentId);
-            List<DocumentResponse> response = documents.stream()
-                .map(DocumentResponse::fromEntity)
-                .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(response);
-            
+            logger.info("GET /api/documents/agent/{} - Getting documents by agent", agentId);
+            List<DocumentResponse> documents = documentService.getDocumentsByAgent(agentId);
+            return ResponseEntity.ok(documents);
         } catch (Exception e) {
-            logger.error("Error obteniendo documentos del agente {}: {}", agentId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error getting documents by agent: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
         }
     }
     
     /**
-     * Buscar documentos por término
+     * Obtener documento por ID
      */
-    @GetMapping("/search")
-    public ResponseEntity<List<DocumentResponse>> searchDocuments(@RequestParam String query) {
+    @GetMapping("/{id}")
+    public ResponseEntity<DocumentResponse> getDocumentById(@PathVariable UUID id) {
         try {
-            logger.info("GET /api/documents/search?query={}", query);
-            
-            List<Document> documents = documentService.searchDocuments(query);
-            List<DocumentResponse> response = documents.stream()
-                .map(DocumentResponse::fromEntity)
-                .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(response);
-            
+            logger.info("GET /api/documents/{} - Getting document by ID", id);
+            DocumentResponse document = documentService.getDocumentById(id);
+            return ResponseEntity.ok(document);
         } catch (Exception e) {
-            logger.error("Error buscando documentos con query '{}': {}", query, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    /**
-     * Obtener documentos por tag
-     */
-    @GetMapping("/tag/{tag}")
-    public ResponseEntity<List<DocumentResponse>> getDocumentsByTag(@PathVariable String tag) {
-        try {
-            logger.info("GET /api/documents/tag/{}", tag);
-            
-            List<Document> documents = documentService.getDocumentsByTag(tag);
-            List<DocumentResponse> response = documents.stream()
-                .map(DocumentResponse::fromEntity)
-                .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            logger.error("Error obteniendo documentos con tag '{}': {}", tag, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
-    /**
-     * Actualizar metadatos del documento
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateDocument(
-            @PathVariable UUID id, 
-            @Valid @RequestBody UpdateDocumentRequest request) {
-        
-        try {
-            logger.info("PUT /api/documents/{} - Actualizando documento", id);
-            
-            Document document = documentService.updateDocument(
-                id, 
-                request.getName(), 
-                request.getDescription(), 
-                request.getTags(), 
-                request.getAgentId()
-            );
-            
-            return ResponseEntity.ok(DocumentResponse.fromEntity(document));
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("Documento no encontrado: {}", id);
-            return ResponseEntity.notFound().build();
-            
-        } catch (Exception e) {
-            logger.error("Error actualizando documento {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new MessageResponse("Error interno del servidor"));
+            logger.error("Error getting document by ID: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
         }
     }
     
@@ -209,66 +123,74 @@ public class DocumentController {
      * Eliminar documento
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteDocument(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteDocument(@PathVariable UUID id) {
         try {
-            logger.info("DELETE /api/documents/{}", id);
-            
+            logger.info("DELETE /api/documents/{} - Deleting document", id);
             documentService.deleteDocument(id);
-            return ResponseEntity.ok(new MessageResponse("Documento eliminado exitosamente"));
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("Documento no encontrado: {}", id);
-            return ResponseEntity.notFound().build();
-            
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
-            logger.error("Error eliminando documento {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new MessageResponse("Error interno del servidor"));
+            logger.error("Error deleting document: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
         }
     }
     
     /**
-     * Actualizar estado de procesamiento (endpoint para N8N)
+     * Buscar documentos por nombre
      */
-    @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateProcessingStatus(
-            @PathVariable UUID id,
-            @RequestParam String status) {
+    @GetMapping("/search")
+    public ResponseEntity<List<DocumentResponse>> searchDocuments(@RequestParam String query) {
+        try {
+            logger.info("GET /api/documents/search?query={} - Searching documents", query);
+            List<DocumentResponse> documents = documentService.searchDocuments(query);
+            return ResponseEntity.ok(documents);
+        } catch (Exception e) {
+            logger.error("Error searching documents: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * Webhook para que N8N notifique el resultado del procesamiento
+     */
+    @PostMapping("/webhook/processing-complete")
+    public ResponseEntity<String> processingComplete(
+            @RequestParam("documentId") UUID documentId,
+            @RequestParam("status") String status,
+            @RequestParam(value = "error", required = false) String error) {
         
         try {
-            logger.info("PUT /api/documents/{}/status - Nuevo estado: {}", id, status);
-            
-            Document.ProcessingStatus processingStatus = Document.ProcessingStatus.valueOf(status.toUpperCase());
-            documentService.updateProcessingStatus(id, processingStatus);
-            
-            return ResponseEntity.ok(new MessageResponse("Estado actualizado exitosamente"));
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("Estado o documento inválido: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                .body(new MessageResponse("Estado o documento inválido"));
-                
+            logger.info("Processing complete webhook for document: {} with status: {}", documentId, status);
+            documentService.updateProcessingStatus(documentId, status, error);
+            return ResponseEntity.ok("OK");
         } catch (Exception e) {
-            logger.error("Error actualizando estado del documento {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new MessageResponse("Error interno del servidor"));
+            logger.error("Error processing webhook: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+    @GetMapping("/stats")
+    public ResponseEntity<DocumentStats> getDocumentStats() {
+        try {
+            logger.info("GET /api/documents/stats - Getting document statistics");
+            DocumentStats stats = documentService.getDocumentStats();
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            logger.error("Error getting document stats: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
         }
     }
     
     /**
-     * Obtener estadísticas de documentos
+     * Endpoint para que N8N notifique que el procesamiento está completo
      */
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getDocumentStats() {
+    @PostMapping("/{id}/processing-complete")
+    public ResponseEntity<Void> markProcessingComplete(@PathVariable UUID id) {
         try {
-            logger.info("GET /api/documents/stats");
-            
-            Map<String, Object> stats = documentService.getDocumentStats();
-            return ResponseEntity.ok(stats);
-            
+            logger.info("POST /api/documents/{}/processing-complete - Marking document as processed", id);
+            documentService.markAsProcessed(id);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
-            logger.error("Error obteniendo estadísticas: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            logger.error("Error marking document as processed: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
         }
     }
 }
