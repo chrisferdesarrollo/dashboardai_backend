@@ -1,5 +1,6 @@
 package com.dashboardai.entity;
 
+import com.dashboardai.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -38,6 +39,14 @@ public class ConversationLog {
     
     @Column(name = "platform", length = 20)
     private String platform;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_conversation_logs_user_id"))
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User user;
+    
+    @Column(name = "agent_id")
+    private UUID agentId;
     
     @Column(name = "timestamp", columnDefinition = "timestamp with time zone")
     private ZonedDateTime timestamp;
@@ -170,6 +179,37 @@ public class ConversationLog {
                 ", timestamp=" + timestamp +
                 ", createdAt=" + createdAt +
                 '}';
+    }
+    
+    // User relationship methods
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
+    
+    public void setUserId(Long userId) {
+        if (userId != null) {
+            this.user = new User();
+            this.user.setId(userId);
+        } else {
+            this.user = null;
+        }
+    }
+    
+    public User getUser() {
+        return user;
+    }
+    
+    public void setUser(User user) {
+        this.user = user;
+    }
+    
+    // Agent relationship methods
+    public UUID getAgentId() {
+        return agentId;
+    }
+    
+    public void setAgentId(UUID agentId) {
+        this.agentId = agentId;
     }
     
     // equals and hashCode

@@ -53,7 +53,7 @@ public class DocumentService {
     /**
      * Procesar documento enviándolo directamente a N8N para vectorización
      */
-    public DocumentResponse processDocumentForVectorization(MultipartFile file, CreateDocumentRequest request, String authToken) {
+    public DocumentResponse processDocumentForVectorization(MultipartFile file, CreateDocumentRequest request, String authToken, Long userId) {
         
         // Validar archivo
         validateFile(file);
@@ -65,6 +65,7 @@ public class DocumentService {
         document.setFileType(file.getContentType());
         document.setTags(request.getTags() != null ? request.getTags().toArray(new String[0]) : null);
         document.setAgentId(request.getAgentId());
+        document.setUserId(userId);
         document.setProcessed(false);
         document.setProcessingStatus(Document.ProcessingStatus.PENDING);
         
@@ -76,9 +77,10 @@ public class DocumentService {
         try {
             sendToN8nWebhook(file, document, authToken);
             
-            // Actualizar estado a "procesando"
-            document.setProcessingStatus(Document.ProcessingStatus.PROCESSING);
+            // Actualizar estado a "completado" ya que el envío fue exitoso
+            document.setProcessingStatus(Document.ProcessingStatus.COMPLETED);
             documentRepository.save(document);
+            logger.info("Document processing completed for ID: {}", document.getId());
             
         } catch (Exception e) {
             logger.error("Error sending document to N8N: {}", e.getMessage(), e);
@@ -98,20 +100,40 @@ public class DocumentService {
      */
     private void sendToN8nWebhook(MultipartFile file, Document document, String authToken) throws Exception {
         
-        // Crear objeto con metadatos para el body
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("documentId", document.getId().toString());
-        requestBody.put("name", document.getName());
-        requestBody.put("description", document.getDescription() != null ? document.getDescription() : "");
-        requestBody.put("fileType", document.getFileType());
-        requestBody.put("agentId", document.getAgentId() != null ? document.getAgentId().toString() : "");
+        // Crear el body con metadatos (sin fileContent) y archivo binario separado
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        
+        // Crear objeto de metadatos sin el contenido del archivo
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("documentId", document.getId().toString());
+        metadata.put("name", document.getName());
+        metadata.put("description", document.getDescription() != null ? document.getDescription() : "");
+        metadata.put("fileType", document.getFileType());
+        metadata.put("agentId", document.getAgentId() != null ? document.getAgentId().toString() : "");
+        metadata.put("userId", document.getUserId().toString());
         if (document.getTags() != null) {
-            requestBody.put("tags", String.join(",", document.getTags()));
+            metadata.put("tags", String.join(",", document.getTags()));
+        }
+        metadata.put("fileName", file.getOriginalFilename());
+        
+        // Agregar metadatos como JSON string
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String metadataJson = objectMapper.writeValueAsString(metadata);
+            body.add("metadata", metadataJson);
+        } catch (Exception e) {
+            logger.error("Error serializing metadata: {}", e.getMessage());
+            throw e;
         }
         
-        // Agregar archivo como base64 al body
-        requestBody.put("fileContent", Base64.getEncoder().encodeToString(file.getBytes()));
-        requestBody.put("fileName", file.getOriginalFilename());
+        // Agregar archivo como binary
+        ByteArrayResource fileResource = new ByteArrayResource(file.getBytes()) {
+            @Override
+            public String getFilename() {
+                return file.getOriginalFilename();
+            }
+        };
+        body.add("file", fileResource);
         
         // Limpiar token
         String cleanToken = "";
@@ -125,17 +147,18 @@ public class DocumentService {
         
         // Configurar headers
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         
         if (!cleanToken.isEmpty()) {
             headers.set("Authorization", "Bearer " + cleanToken);
         }
         
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
         
         // Enviar request
-        logger.info("Sending document with metadata in body to N8N webhook: {}", n8nWebhookUrl);
-        logger.info("Metadata in body: documentId={}, name={}", document.getId(), document.getName());
+        logger.info("Sending document with binary file to N8N webhook: {}", n8nWebhookUrl);
+        logger.info("Metadata includes: documentId={}, name={}, file as binary", 
+                   document.getId(), document.getName());
         ResponseEntity<String> response = restTemplate.postForEntity(n8nWebhookUrl, requestEntity, String.class);
         
         if (response.getStatusCode().is2xxSuccessful()) {
@@ -246,6 +269,36 @@ public class DocumentService {
      */
     public List<DocumentResponse> searchDocuments(String query) {
         return documentRepository.findByNameOrDescriptionContainingIgnoreCase(query)
+                .stream()
+                .map(DocumentResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Obtener todos los documentos de un usuario específico
+     */
+    public List<DocumentResponse> getAllDocumentsByUser(Long userId) {
+        return documentRepository.findByUser_IdOrderByUploadDateDesc(userId)
+                .stream()
+                .map(DocumentResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Obtener documentos por agente y usuario
+     */
+    public List<DocumentResponse> getDocumentsByAgentAndUser(UUID agentId, Long userId) {
+        return documentRepository.findByUser_IdAndAgentId(userId, agentId)
+                .stream()
+                .map(DocumentResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Buscar documentos por usuario
+     */
+    public List<DocumentResponse> searchDocumentsByUser(String query, Long userId) {
+        return documentRepository.findByUser_IdAndNameOrDescriptionContainingIgnoreCase(userId, query)
                 .stream()
                 .map(DocumentResponse::fromEntity)
                 .collect(Collectors.toList());

@@ -12,13 +12,13 @@ import java.util.UUID;
 public interface AgentWhatsAppRepository extends JpaRepository<AgentWhatsApp, UUID> {
     
     // Buscar agentes por usuario
-    List<AgentWhatsApp> findByUserId(Long userId);
+    List<AgentWhatsApp> findByUser_Id(Long userId);
     
     // Buscar agentes por estado
     List<AgentWhatsApp> findByStatus(AgentWhatsApp.AgentStatus status);
     
     // Buscar agentes activos de un usuario
-    List<AgentWhatsApp> findByUserIdAndStatus(Long userId, AgentWhatsApp.AgentStatus status);
+    List<AgentWhatsApp> findByUser_IdAndStatus(Long userId, AgentWhatsApp.AgentStatus status);
     
     // Buscar agentes por nombre (case insensitive)
     List<AgentWhatsApp> findByNameContainingIgnoreCase(String name);
@@ -35,7 +35,7 @@ public interface AgentWhatsAppRepository extends JpaRepository<AgentWhatsApp, UU
     List<AgentWhatsApp> findTopByExecutions();
     
     // Verificar si existe un agente con ese nombre para un usuario
-    boolean existsByNameAndUserId(String name, Long userId);
+    boolean existsByNameAndUser_Id(String name, Long userId);
     
     // Verificar si existe un agente con ese session name
     boolean existsBySessionName(String sessionName);

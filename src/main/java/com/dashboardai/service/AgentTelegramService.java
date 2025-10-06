@@ -34,7 +34,7 @@ public class AgentTelegramService {
             
             // Verificar si ya existe un agente con ese nombre para el usuario
             if (request.getUserId() != null && 
-                agentTelegramRepository.existsByNameAndUserId(request.getName(), request.getUserId())) {
+                agentTelegramRepository.existsByNameAndUser_Id(request.getName(), request.getUserId())) {
                 throw new RuntimeException("Ya existe un agente Telegram con ese nombre");
             }
             
@@ -120,7 +120,7 @@ public class AgentTelegramService {
     @Transactional(readOnly = true)
     public List<TelegramAgentResponse> getAgentsByUser(Long userId) {
         try {
-            List<AgentTelegram> agents = agentTelegramRepository.findByUserId(userId);
+            List<AgentTelegram> agents = agentTelegramRepository.findByUser_Id(userId);
             return agents.stream()
                     .map(TelegramAgentResponse::new)
                     .collect(Collectors.toList());

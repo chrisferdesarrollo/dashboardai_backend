@@ -1,5 +1,6 @@
 package com.dashboardai.entity;
 
+import com.dashboardai.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -53,8 +54,10 @@ public class AgentTelegram {
     @Column(name = "last_execution_at")
     private LocalDateTime lastExecutionAt;
     
-    @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_agents_telegram_user_id"))
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User user;
     
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -180,11 +183,24 @@ public class AgentTelegram {
     }
     
     public Long getUserId() {
-        return userId;
+        return user != null ? user.getId() : null;
     }
     
     public void setUserId(Long userId) {
-        this.userId = userId;
+        if (userId != null) {
+            this.user = new User();
+            this.user.setId(userId);
+        } else {
+            this.user = null;
+        }
+    }
+    
+    public User getUser() {
+        return user;
+    }
+    
+    public void setUser(User user) {
+        this.user = user;
     }
     
     public LocalDateTime getCreatedAt() {

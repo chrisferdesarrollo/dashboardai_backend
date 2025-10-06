@@ -12,13 +12,13 @@ import java.util.UUID;
 public interface AgentTelegramRepository extends JpaRepository<AgentTelegram, UUID> {
     
     // Buscar agentes por usuario
-    List<AgentTelegram> findByUserId(Long userId);
+    List<AgentTelegram> findByUser_Id(Long userId);
     
     // Buscar agentes por estado
     List<AgentTelegram> findByStatus(AgentTelegram.AgentStatus status);
     
     // Buscar agentes activos de un usuario
-    List<AgentTelegram> findByUserIdAndStatus(Long userId, AgentTelegram.AgentStatus status);
+    List<AgentTelegram> findByUser_IdAndStatus(Long userId, AgentTelegram.AgentStatus status);
     
     // Buscar agentes por nombre (case insensitive)
     List<AgentTelegram> findByNameContainingIgnoreCase(String name);
@@ -38,7 +38,7 @@ public interface AgentTelegramRepository extends JpaRepository<AgentTelegram, UU
     List<AgentTelegram> findTopByExecutions();
     
     // Verificar si existe un agente con ese nombre para un usuario
-    boolean existsByNameAndUserId(String name, Long userId);
+    boolean existsByNameAndUser_Id(String name, Long userId);
     
     // Verificar si existe un agente con ese bot name
     boolean existsByBotName(String botName);

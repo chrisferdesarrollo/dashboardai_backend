@@ -57,4 +57,25 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     
     // Obtener documentos ordenados por fecha de subida descendente con paginación
     Page<Document> findAllByOrderByUploadDateDesc(Pageable pageable);
+    
+    // Buscar documentos por usuario
+    List<Document> findByUser_Id(Long userId);
+    
+    // Buscar documentos por usuario y agente
+    List<Document> findByUser_IdAndAgentId(Long userId, UUID agentId);
+    
+    // Buscar documentos por usuario ordenados por fecha
+    List<Document> findByUser_IdOrderByUploadDateDesc(Long userId);
+    
+    // Buscar documentos por usuario con paginación
+    Page<Document> findByUser_Id(Long userId, Pageable pageable);
+    
+    // Buscar documentos por usuario y texto (nombre o descripción)
+    @Query("SELECT d FROM Document d WHERE d.user.id = :userId AND " +
+           "(LOWER(d.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(d.description) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<Document> findByUser_IdAndNameOrDescriptionContainingIgnoreCase(@Param("userId") Long userId, @Param("query") String query);
+    
+    // Contar documentos por usuario
+    long countByUser_Id(Long userId);
 }

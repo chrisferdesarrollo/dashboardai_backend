@@ -78,7 +78,7 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
            "FROM ConversationLog cl " +
            "LEFT JOIN AgentWhatsApp aw ON cl.sessionName = aw.sessionName " +
            "LEFT JOIN AgentTelegram at ON cl.sessionName = at.sessionName " +
-           "WHERE (aw.userId = :userId OR at.userId = :userId) " +
+           "WHERE (aw.user.id = :userId OR at.user.id = :userId) " +
            "GROUP BY cl.sessionName, aw.name, at.name, aw.sessionName, at.sessionName, cl.platform " +
            "ORDER BY MAX(cl.createdAt) DESC")
     List<Object[]> getConversationStatsBySessionAndUserId(@Param("userId") Long userId);

@@ -1,5 +1,6 @@
 package com.dashboardai.entity;
 
+import com.dashboardai.model.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -35,6 +36,11 @@ public class Document {
     
     @Column(name = "agent_id")
     private UUID agentId;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_documents_user_id"))
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User user;
     
     @Column(name = "upload_date", nullable = false)
     private LocalDateTime uploadDate;
@@ -117,6 +123,27 @@ public class Document {
         this.agentId = agentId;
     }
     
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
+    
+    public void setUserId(Long userId) {
+        if (userId != null) {
+            this.user = new User();
+            this.user.setId(userId);
+        } else {
+            this.user = null;
+        }
+    }
+    
+    public User getUser() {
+        return user;
+    }
+    
+    public void setUser(User user) {
+        this.user = user;
+    }
+    
     public LocalDateTime getUploadDate() {
         return uploadDate;
     }
@@ -169,6 +196,7 @@ public class Document {
                 ", name='" + name + '\'' +
                 ", fileType='" + fileType + '\'' +
                 ", agentId=" + agentId +
+                ", userId=" + getUserId() +
                 ", processed=" + processed +
                 ", processingStatus=" + processingStatus +
                 ", createdAt=" + createdAt +

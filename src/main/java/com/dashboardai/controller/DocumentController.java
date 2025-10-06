@@ -4,11 +4,13 @@ import com.dashboardai.dto.request.CreateDocumentRequest;
 import com.dashboardai.dto.response.DocumentResponse;
 import com.dashboardai.dto.response.DocumentUploadResponse;
 import com.dashboardai.dto.response.DocumentStats;
+import com.dashboardai.security.services.UserDetailsImpl;
 import com.dashboardai.service.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +28,18 @@ public class DocumentController {
     private DocumentService documentService;
     
     /**
+     * Obtener el ID del usuario autenticado
+     */
+    private Long getCurrentUserId(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new RuntimeException("Usuario no autenticado");
+        }
+        
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        return userDetails.getId(); // Devolver ID como Long
+    }
+    
+    /**
      * Subir documento y enviarlo automáticamente a N8N para vectorización
      */
     @PostMapping("/upload")
@@ -36,7 +50,8 @@ public class DocumentController {
             @RequestParam(value = "tags", required = false) String[] tags,
             @RequestParam(value = "agentId", required = false) UUID agentId,
             @RequestParam(value = "authToken", required = false) String authToken,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            Authentication authentication) {
         
         try {
             logger.info("POST /api/documents/upload - Uploading document: {} ({})", 
@@ -62,8 +77,11 @@ public class DocumentController {
             request.setTags(tags != null ? List.of(tags) : null);
             request.setAgentId(agentId);
             
+            // Obtener userId del usuario autenticado
+            Long userId = getCurrentUserId(authentication);
+            
             // Procesar documento y enviarlo a N8N
-            DocumentResponse response = documentService.processDocumentForVectorization(file, request, finalToken);
+            DocumentResponse response = documentService.processDocumentForVectorization(file, request, finalToken, userId);
             
             return ResponseEntity.ok(DocumentUploadResponse.success(response));
             
@@ -75,13 +93,14 @@ public class DocumentController {
     }
     
     /**
-     * Obtener todos los documentos procesados
+     * Obtener todos los documentos del usuario autenticado
      */
     @GetMapping
-    public ResponseEntity<List<DocumentResponse>> getAllDocuments() {
+    public ResponseEntity<List<DocumentResponse>> getAllDocuments(Authentication authentication) {
         try {
-            logger.info("GET /api/documents - Getting all documents");
-            List<DocumentResponse> documents = documentService.getAllDocuments();
+            Long userId = getCurrentUserId(authentication);
+            logger.info("GET /api/documents - Getting all documents for user: {}", userId);
+            List<DocumentResponse> documents = documentService.getAllDocumentsByUser(userId);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
             logger.error("Error getting documents: {}", e.getMessage(), e);
@@ -90,13 +109,14 @@ public class DocumentController {
     }
     
     /**
-     * Obtener documentos por agente
+     * Obtener documentos por agente del usuario autenticado
      */
     @GetMapping("/agent/{agentId}")
-    public ResponseEntity<List<DocumentResponse>> getDocumentsByAgent(@PathVariable UUID agentId) {
+    public ResponseEntity<List<DocumentResponse>> getDocumentsByAgent(@PathVariable UUID agentId, Authentication authentication) {
         try {
-            logger.info("GET /api/documents/agent/{} - Getting documents by agent", agentId);
-            List<DocumentResponse> documents = documentService.getDocumentsByAgent(agentId);
+            Long userId = getCurrentUserId(authentication);
+            logger.info("GET /api/documents/agent/{} - Getting documents by agent for user: {}", agentId, userId);
+            List<DocumentResponse> documents = documentService.getDocumentsByAgentAndUser(agentId, userId);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
             logger.error("Error getting documents by agent: {}", e.getMessage(), e);
@@ -135,13 +155,14 @@ public class DocumentController {
     }
     
     /**
-     * Buscar documentos por nombre
+     * Buscar documentos por nombre del usuario autenticado
      */
     @GetMapping("/search")
-    public ResponseEntity<List<DocumentResponse>> searchDocuments(@RequestParam String query) {
+    public ResponseEntity<List<DocumentResponse>> searchDocuments(@RequestParam String query, Authentication authentication) {
         try {
-            logger.info("GET /api/documents/search?query={} - Searching documents", query);
-            List<DocumentResponse> documents = documentService.searchDocuments(query);
+            Long userId = getCurrentUserId(authentication);
+            logger.info("GET /api/documents/search?query={} - Searching documents for user: {}", query, userId);
+            List<DocumentResponse> documents = documentService.searchDocumentsByUser(query, userId);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
             logger.error("Error searching documents: {}", e.getMessage(), e);

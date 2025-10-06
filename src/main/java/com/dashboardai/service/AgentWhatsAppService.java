@@ -34,7 +34,7 @@ public class AgentWhatsAppService {
             
             // Verificar si ya existe un agente con ese nombre para el usuario
             if (request.getUserId() != null && 
-                agentWhatsAppRepository.existsByNameAndUserId(request.getName(), request.getUserId())) {
+                agentWhatsAppRepository.existsByNameAndUser_Id(request.getName(), request.getUserId())) {
                 throw new RuntimeException("Ya existe un agente WhatsApp con ese nombre");
             }
             
@@ -96,7 +96,7 @@ public class AgentWhatsAppService {
     @Transactional(readOnly = true)
     public List<WhatsAppAgentResponse> getAgentsByUser(Long userId) {
         try {
-            List<AgentWhatsApp> agents = agentWhatsAppRepository.findByUserId(userId);
+            List<AgentWhatsApp> agents = agentWhatsAppRepository.findByUser_Id(userId);
             return agents.stream()
                     .map(WhatsAppAgentResponse::new)
                     .collect(Collectors.toList());
