@@ -3,7 +3,11 @@ package com.dashboardai.service;
 import com.dashboardai.dto.request.CreateDocumentRequest;
 import com.dashboardai.dto.response.DocumentResponse;
 import com.dashboardai.entity.Document;
+import com.dashboardai.entity.AgentTelegram;
+import com.dashboardai.entity.AgentWhatsApp;
 import com.dashboardai.repository.DocumentRepository;
+import com.dashboardai.repository.AgentTelegramRepository;
+import com.dashboardai.repository.AgentWhatsAppRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +33,12 @@ public class DocumentService {
     
     @Autowired
     private DocumentRepository documentRepository;
+    
+    @Autowired
+    private AgentTelegramRepository agentTelegramRepository;
+    
+    @Autowired
+    private AgentWhatsAppRepository agentWhatsAppRepository;
     
     @Autowired
     private RestTemplate restTemplate;
@@ -115,6 +125,20 @@ public class DocumentService {
             metadata.put("tags", String.join(",", document.getTags()));
         }
         metadata.put("fileName", file.getOriginalFilename());
+        
+        // Obtener session_name del agente si está disponible
+        if (document.getAgentId() != null) {
+            try {
+                // Aquí consultaremos el session_name del agente
+                String agentSessionName = getAgentSessionName(document.getAgentId());
+                if (agentSessionName != null && !agentSessionName.isEmpty()) {
+                    metadata.put("sessionName", agentSessionName);
+                    metadata.put("platform", extractPlatformFromSession(agentSessionName)); // telegram, whatsapp, etc.
+                }
+            } catch (Exception e) {
+                logger.warn("Could not retrieve agent session name for agentId: {}", document.getAgentId());
+            }
+        }
         
         // Agregar metadatos como JSON string
         try {
@@ -305,7 +329,31 @@ public class DocumentService {
     }
     
     /**
-     * Obtener estadísticas de documentos
+     * Obtener estadísticas de documentos por usuario
+     */
+    public com.dashboardai.dto.response.DocumentStats getDocumentStatsByUser(Long userId) {
+        List<Document> documents = documentRepository.findByUser_IdOrderByUploadDateDesc(userId);
+        
+        long total = documents.size();
+        long processed = documents.stream()
+                .mapToLong(doc -> doc.getProcessed() ? 1 : 0)
+                .sum();
+        long pending = documents.stream()
+                .mapToLong(doc -> (doc.getProcessingStatus() == Document.ProcessingStatus.PENDING || 
+                                 doc.getProcessingStatus() == Document.ProcessingStatus.PROCESSING) ? 1 : 0)
+                .sum();
+        long failed = documents.stream()
+                .mapToLong(doc -> doc.getProcessingStatus() == Document.ProcessingStatus.FAILED ? 1 : 0)
+                .sum();
+        
+        double successRate = total > 0 ? (double) processed / total * 100 : 0;
+        successRate = Math.round(successRate * 100.0) / 100.0; // Redondear a 2 decimales
+        
+        return new com.dashboardai.dto.response.DocumentStats(total, processed, pending, failed, successRate);
+    }
+    
+    /**
+     * Obtener estadísticas de documentos globales (mantenido para compatibilidad)
      */
     public com.dashboardai.dto.response.DocumentStats getDocumentStats() {
         List<Document> documents = documentRepository.findAll();
@@ -343,5 +391,48 @@ public class DocumentService {
         } else {
             throw new RuntimeException("Documento no encontrado: " + id);
         }
+    }
+    
+    /**
+     * Obtener session_name del agente basado en su ID
+     */
+    private String getAgentSessionName(UUID agentId) {
+        // Buscar primero en AgentTelegram
+        Optional<AgentTelegram> telegramAgent = agentTelegramRepository.findById(agentId);
+        if (telegramAgent.isPresent() && telegramAgent.get().getSessionName() != null) {
+            return telegramAgent.get().getSessionName();
+        }
+        
+        // Buscar en AgentWhatsApp
+        Optional<AgentWhatsApp> whatsappAgent = agentWhatsAppRepository.findById(agentId);
+        if (whatsappAgent.isPresent() && whatsappAgent.get().getSessionName() != null) {
+            return whatsappAgent.get().getSessionName();
+        }
+        
+        logger.warn("No session name found for agent ID: {}", agentId);
+        return null;
+    }
+    
+    /**
+     * Extraer plataforma del session_name
+     */
+    private String extractPlatformFromSession(String sessionName) {
+        if (sessionName == null || sessionName.isEmpty()) {
+            return "unknown";
+        }
+        
+        if (sessionName.toLowerCase().contains("telegram")) {
+            return "telegram";
+        } else if (sessionName.toLowerCase().contains("whatsapp")) {
+            return "whatsapp";
+        } else {
+            // Intentar extraer de formato: platform_type_id
+            String[] parts = sessionName.split("_");
+            if (parts.length > 0) {
+                return parts[0];
+            }
+        }
+        
+        return "unknown";
     }
 }

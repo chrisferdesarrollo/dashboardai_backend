@@ -189,10 +189,11 @@ public class DocumentController {
         }
     }
     @GetMapping("/stats")
-    public ResponseEntity<DocumentStats> getDocumentStats() {
+    public ResponseEntity<DocumentStats> getDocumentStats(Authentication authentication) {
         try {
             logger.info("GET /api/documents/stats - Getting document statistics");
-            DocumentStats stats = documentService.getDocumentStats();
+            Long userId = getCurrentUserId(authentication);
+            DocumentStats stats = documentService.getDocumentStatsByUser(userId);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             logger.error("Error getting document stats: {}", e.getMessage(), e);
