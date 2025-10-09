@@ -58,6 +58,9 @@ public class User {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     public User() {
     }
 
@@ -146,5 +149,13 @@ public class User {
 
     public void setEmailVerifiedAt(LocalDateTime emailVerifiedAt) {
         this.emailVerifiedAt = emailVerifiedAt;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 }
