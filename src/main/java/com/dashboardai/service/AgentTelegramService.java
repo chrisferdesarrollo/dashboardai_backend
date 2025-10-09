@@ -1,6 +1,7 @@
 package com.dashboardai.service;
 
 import com.dashboardai.dto.request.CreateTelegramAgentRequest;
+import com.dashboardai.dto.request.UpdateAgentRequest;
 import com.dashboardai.dto.response.TelegramAgentResponse;
 import com.dashboardai.entity.AgentTelegram;
 import com.dashboardai.repository.AgentTelegramRepository;
@@ -212,6 +213,49 @@ public class AgentTelegramService {
         }
     }
     
+    /**
+     * Actualizar un agente Telegram
+     */
+    public TelegramAgentResponse updateAgent(UUID agentId, UpdateAgentRequest request) {
+        try {
+            Optional<AgentTelegram> agentOpt = agentTelegramRepository.findById(agentId);
+            if (agentOpt.isPresent()) {
+                AgentTelegram agent = agentOpt.get();
+                
+                // Actualizar solo los campos que no son nulos en la request
+                if (request.getName() != null && !request.getName().trim().isEmpty()) {
+                    agent.setName(request.getName().trim());
+                }
+                
+                if (request.getDescription() != null) {
+                    agent.setDescription(request.getDescription().trim());
+                }
+                
+                if (request.getPrompt() != null) {
+                    agent.setPrompt(request.getPrompt());
+                }
+                
+                if (request.getSessionName() != null && !request.getSessionName().trim().isEmpty()) {
+                    agent.setSessionName(request.getSessionName().trim());
+                }
+                
+                if (request.getPlatformConfig() != null) {
+                    agent.setPlatformConfig(request.getPlatformConfig());
+                }
+                
+                AgentTelegram updatedAgent = agentTelegramRepository.save(agent);
+                
+                logger.info("Telegram agent {} updated successfully", agentId);
+                return new TelegramAgentResponse(updatedAgent);
+            } else {
+                throw new RuntimeException("Agente Telegram no encontrado");
+            }
+        } catch (Exception e) {
+            logger.error("Error updating Telegram agent {}: {}", agentId, e.getMessage(), e);
+            throw new RuntimeException("Error al actualizar el agente Telegram: " + e.getMessage());
+        }
+    }
+
     /**
      * Eliminar un agente Telegram
      */

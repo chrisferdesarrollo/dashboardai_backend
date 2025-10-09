@@ -1,6 +1,7 @@
 package com.dashboardai.service;
 
 import com.dashboardai.dto.request.CreateWhatsAppAgentRequest;
+import com.dashboardai.dto.request.UpdateAgentRequest;
 import com.dashboardai.dto.response.WhatsAppAgentResponse;
 import com.dashboardai.entity.AgentWhatsApp;
 import com.dashboardai.repository.AgentWhatsAppRepository;
@@ -167,6 +168,49 @@ public class AgentWhatsAppService {
         }
     }
     
+    /**
+     * Actualizar un agente WhatsApp
+     */
+    public WhatsAppAgentResponse updateAgent(UUID agentId, UpdateAgentRequest request) {
+        try {
+            Optional<AgentWhatsApp> agentOpt = agentWhatsAppRepository.findById(agentId);
+            if (agentOpt.isPresent()) {
+                AgentWhatsApp agent = agentOpt.get();
+                
+                // Actualizar solo los campos que no son nulos en la request
+                if (request.getName() != null && !request.getName().trim().isEmpty()) {
+                    agent.setName(request.getName().trim());
+                }
+                
+                if (request.getDescription() != null) {
+                    agent.setDescription(request.getDescription().trim());
+                }
+                
+                if (request.getPrompt() != null) {
+                    agent.setPrompt(request.getPrompt());
+                }
+                
+                if (request.getSessionName() != null && !request.getSessionName().trim().isEmpty()) {
+                    agent.setSessionName(request.getSessionName().trim());
+                }
+                
+                if (request.getPlatformConfig() != null) {
+                    agent.setPlatformConfig(request.getPlatformConfig());
+                }
+                
+                AgentWhatsApp updatedAgent = agentWhatsAppRepository.save(agent);
+                
+                logger.info("WhatsApp agent {} updated successfully", agentId);
+                return new WhatsAppAgentResponse(updatedAgent);
+            } else {
+                throw new RuntimeException("Agente WhatsApp no encontrado");
+            }
+        } catch (Exception e) {
+            logger.error("Error updating WhatsApp agent {}: {}", agentId, e.getMessage(), e);
+            throw new RuntimeException("Error al actualizar el agente WhatsApp: " + e.getMessage());
+        }
+    }
+
     /**
      * Eliminar un agente WhatsApp
      */

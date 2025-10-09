@@ -3,6 +3,7 @@ package com.dashboardai.controller;
 import com.dashboardai.dto.request.CreateAgentRequest;
 import com.dashboardai.dto.request.CreateWhatsAppAgentRequest;
 import com.dashboardai.dto.request.CreateTelegramAgentRequest;
+import com.dashboardai.dto.request.UpdateAgentRequest;
 import com.dashboardai.dto.response.UnifiedAgentResponse;
 import com.dashboardai.dto.response.MessageResponse;
 import com.dashboardai.model.AgentPlatform;
@@ -239,6 +240,51 @@ public class AgentController {
         }
     }
     
+    /**
+     * Actualizar un agente (WhatsApp o Telegram)
+     */
+    @PutMapping("/{agentId}")
+    public ResponseEntity<?> updateAgent(@PathVariable UUID agentId, @Valid @RequestBody UpdateAgentRequest request) {
+        try {
+            logger.info("PUT /api/agents/{} - Updating agent", agentId);
+            
+            // Primero intentar encontrar el agente en WhatsApp
+            try {
+                var whatsappAgent = agentWhatsAppService.getAgentById(agentId);
+                if (whatsappAgent != null) {
+                    var updatedAgent = agentWhatsAppService.updateAgent(agentId, request);
+                    logger.info("WhatsApp agent {} updated successfully", agentId);
+                    return ResponseEntity.ok(new UnifiedAgentResponse(updatedAgent, "whatsapp"));
+                }
+            } catch (RuntimeException e) {
+                // El agente no existe en WhatsApp, intentar Telegram
+                logger.debug("Agent not found in WhatsApp table: {}", e.getMessage());
+            }
+            
+            // Si no es WhatsApp o no se encontró, intentar con Telegram
+            try {
+                var telegramAgent = agentTelegramService.getAgentById(agentId);
+                if (telegramAgent != null) {
+                    var updatedAgent = agentTelegramService.updateAgent(agentId, request);
+                    logger.info("Telegram agent {} updated successfully", agentId);
+                    return ResponseEntity.ok(new UnifiedAgentResponse(updatedAgent, "telegram"));
+                }
+            } catch (RuntimeException e) {
+                // El agente no existe en Telegram tampoco
+                logger.debug("Agent not found in Telegram table: {}", e.getMessage());
+            }
+            
+            // Si llegamos aquí, el agente no existe en ninguna tabla
+            logger.warn("Agent {} not found in any table", agentId);
+            return ResponseEntity.notFound().build();
+            
+        } catch (Exception e) {
+            logger.error("Error updating agent {}: {}", agentId, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error al actualizar agente: " + e.getMessage()));
+        }
+    }
+
     /**
      * Actualizar el estado de un agente (WhatsApp o Telegram)
      * Mantiene compatibilidad con frontend existente

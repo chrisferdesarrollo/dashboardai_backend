@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.ZonedDateTime;
 
 @RestController
 @RequestMapping("/api/conversation-logs")
@@ -264,6 +265,38 @@ public class ConversationLogController {
             
         } catch (Exception e) {
             logger.error("Error fetching recent conversation logs: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new GetConversationLogsResponseWrapper(false, null, e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtener logs recientes para notificaciones (con filtro de timestamp opcional)
+     */
+    @GetMapping("/recent-for-notifications")
+    public ResponseEntity<?> getRecentConversationLogsForNotifications(
+            @RequestParam(required = false) String since) {
+        try {
+            logger.info("GET /api/conversation-logs/recent-for-notifications - Since: {}", since);
+            
+            List<ConversationLog> logs;
+            if (since != null && !since.isEmpty()) {
+                // Parsear el timestamp desde el parámetro
+                ZonedDateTime sinceTimestamp = ZonedDateTime.parse(since);
+                logs = conversationLogService.getConversationLogsSince(sinceTimestamp);
+            } else {
+                // Si no hay timestamp, obtener logs de las últimas 2 horas
+                logs = conversationLogService.getRecentConversationLogsForNotifications();
+            }
+            
+            List<ConversationLogResponse> responses = logs.stream()
+                    .map(ConversationLogResponse::new)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching recent conversation logs for notifications: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(new GetConversationLogsResponseWrapper(false, null, e.getMessage()));
         }

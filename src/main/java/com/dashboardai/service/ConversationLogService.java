@@ -263,6 +263,33 @@ public class ConversationLogService {
     }
     
     /**
+     * Obtener logs recientes para notificaciones (últimas 2 horas)
+     */
+    @Transactional(readOnly = true)
+    public List<ConversationLog> getRecentConversationLogsForNotifications() {
+        try {
+            ZonedDateTime since = ZonedDateTime.now().minusHours(2);
+            return conversationLogRepository.findRecentLogs(since);
+        } catch (Exception e) {
+            logger.error("Error fetching recent conversation logs for notifications: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener los logs recientes para notificaciones");
+        }
+    }
+    
+    /**
+     * Obtener logs desde un timestamp específico
+     */
+    @Transactional(readOnly = true)
+    public List<ConversationLog> getConversationLogsSince(ZonedDateTime since) {
+        try {
+            return conversationLogRepository.findRecentLogs(since);
+        } catch (Exception e) {
+            logger.error("Error fetching conversation logs since {}: {}", since, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener los logs desde el timestamp especificado");
+        }
+    }
+    
+    /**
      * Obtener logs en un rango de fechas para una sesión
      */
     @Transactional(readOnly = true)

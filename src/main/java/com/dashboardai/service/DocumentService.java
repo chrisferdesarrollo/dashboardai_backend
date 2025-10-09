@@ -50,6 +50,7 @@ public class DocumentService {
     private static final Set<String> ALLOWED_TYPES = Set.of(
         "application/pdf",
         "application/msword",
+        "application/msword-docx", // Versión corta para DOCX
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "text/plain",
         "text/markdown",
@@ -68,20 +69,37 @@ public class DocumentService {
         // Validar archivo
         validateFile(file);
         
+        // Validar datos requeridos
+        validateRequestData(request, userId);
+        
         // Crear registro en BD con metadatos
         Document document = new Document();
-        document.setName(request.getName());
-        document.setDescription(request.getDescription());
-        document.setFileType(file.getContentType());
-        document.setTags(request.getTags() != null ? request.getTags().toArray(new String[0]) : null);
+        document.setName(request.getName().trim());
+        document.setDescription(request.getDescription() != null ? request.getDescription().trim() : "");
+        
+        // Normalizar tipo de archivo para Word
+        String fileType = normalizeFileType(file.getContentType(), file.getOriginalFilename());
+        document.setFileType(fileType);
+        
+        document.setTags(request.getTags() != null ? request.getTags().toArray(new String[0]) : new String[0]);
         document.setAgentId(request.getAgentId());
         document.setUserId(userId);
         document.setProcessed(false);
         document.setProcessingStatus(Document.ProcessingStatus.PENDING);
         
         // Guardar en BD
-        document = documentRepository.save(document);
-        logger.info("Document metadata saved with ID: {}", document.getId());
+        try {
+            logger.info("Attempting to save document: name={}, fileType={}, userId={}, agentId={}", 
+                       document.getName(), document.getFileType(), userId, document.getAgentId());
+            
+            document = documentRepository.save(document);
+            logger.info("Document metadata saved successfully with ID: {}", document.getId());
+            
+        } catch (Exception e) {
+            logger.error("Error saving document to database: name={}, fileType={}, userId={}, error={}", 
+                        document.getName(), document.getFileType(), userId, e.getMessage(), e);
+            throw new RuntimeException("Error guardando el documento en la base de datos: " + e.getMessage(), e);
+        }
         
         // Enviar a N8N de forma asíncrona
         try {
@@ -205,9 +223,103 @@ public class DocumentService {
         }
         
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
-            throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos soportados: PDF, Word, TXT, MD, CSV");
+        String filename = file.getOriginalFilename();
+        
+        logger.info("Validating file: name={}, contentType={}, size={}", filename, contentType, file.getSize());
+        
+        // Verificar por tipo MIME o extensión
+        boolean isValidType = false;
+        
+        if (contentType != null) {
+            String normalizedType = contentType.toLowerCase().trim();
+            isValidType = ALLOWED_TYPES.contains(normalizedType) ||
+                         normalizedType.contains("wordprocessingml") ||
+                         normalizedType.contains("openxmlformats") ||
+                         normalizedType.contains("msword");
         }
+        
+        // Si no es válido por tipo MIME, verificar por extensión
+        if (!isValidType && filename != null) {
+            String lowerFilename = filename.toLowerCase();
+            isValidType = lowerFilename.endsWith(".pdf") ||
+                         lowerFilename.endsWith(".docx") ||
+                         lowerFilename.endsWith(".doc") ||
+                         lowerFilename.endsWith(".txt") ||
+                         lowerFilename.endsWith(".md") ||
+                         lowerFilename.endsWith(".csv");
+        }
+        
+        if (!isValidType) {
+            throw new IllegalArgumentException("Tipo de archivo no permitido. Formatos soportados: PDF, Word (.doc, .docx), TXT, MD, CSV");
+        }
+    }
+    
+    /**
+     * Validar datos de la request
+     */
+    private void validateRequestData(CreateDocumentRequest request, Long userId) {
+        if (request == null) {
+            throw new IllegalArgumentException("Los datos del documento son requeridos");
+        }
+        
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del documento es requerido");
+        }
+        
+        if (userId == null) {
+            throw new IllegalArgumentException("El ID de usuario es requerido");
+        }
+    }
+    
+    /**
+     * Normalizar tipo de archivo, especialmente para documentos Word
+     */
+    private String normalizeFileType(String contentType, String filename) {
+        if (contentType == null || contentType.isEmpty()) {
+            // Intentar determinar por extensión
+            if (filename != null) {
+                String lowerFilename = filename.toLowerCase();
+                if (lowerFilename.endsWith(".docx")) {
+                    return "application/msword-docx"; // Versión corta para DOCX
+                } else if (lowerFilename.endsWith(".doc")) {
+                    return "application/msword"; // 19 caracteres
+                } else if (lowerFilename.endsWith(".pdf")) {
+                    return "application/pdf"; // 15 caracteres
+                } else if (lowerFilename.endsWith(".txt")) {
+                    return "text/plain"; // 10 caracteres
+                }
+            }
+            return "application/octet-stream"; // 24 caracteres
+        }
+        
+        // Normalizar tipos MIME conocidos y acortarlos para que quepan en 50 caracteres
+        String normalizedType = contentType.toLowerCase().trim();
+        
+        // Para documentos Word, usar versiones cortas
+        if (normalizedType.contains("wordprocessingml") || 
+            normalizedType.contains("openxmlformats") ||
+            (filename != null && filename.toLowerCase().endsWith(".docx"))) {
+            return "application/msword-docx"; // 22 caracteres - versión corta para DOCX
+        }
+        
+        if (normalizedType.contains("msword") || 
+            (filename != null && filename.toLowerCase().endsWith(".doc"))) {
+            return "application/msword"; // 19 caracteres
+        }
+        
+        // Asegurar que no exceda 50 caracteres
+        if (normalizedType.length() > 50) {
+            // Acortar tipos conocidos
+            if (normalizedType.startsWith("application/")) {
+                if (normalizedType.contains("pdf")) return "application/pdf";
+                if (normalizedType.contains("text")) return "text/plain";
+                if (normalizedType.contains("csv")) return "text/csv";
+            }
+            // Si sigue siendo muy largo, truncar
+            return normalizedType.substring(0, 50);
+        }
+        
+        return normalizedType;
     }
     
     
