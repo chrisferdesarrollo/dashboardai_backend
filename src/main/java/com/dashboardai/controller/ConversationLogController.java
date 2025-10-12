@@ -404,6 +404,25 @@ public class ConversationLogController {
     }
     
     /**
+     * Eliminar toda una conversación (todos los logs de una sesión)
+     */
+    @DeleteMapping("/session/{sessionName}")
+    public ResponseEntity<?> deleteConversationBySessionName(@PathVariable String sessionName) {
+        try {
+            logger.info("DELETE /api/conversation-logs/session/{} - Deleting entire conversation", sessionName);
+            
+            conversationLogService.deleteConversationBySessionName(sessionName);
+            
+            return ResponseEntity.ok(new MessageResponse("Conversación eliminada exitosamente"));
+            
+        } catch (Exception e) {
+            logger.error("Error deleting conversation {}: {}", sessionName, e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse("Error al eliminar la conversación: " + e.getMessage()));
+        }
+    }
+    
+    /**
      * Eliminar logs antiguos
      */
     @DeleteMapping("/cleanup/{daysToKeep}")

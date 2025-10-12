@@ -8,6 +8,7 @@ import com.dashboardai.entity.AgentWhatsApp;
 import com.dashboardai.repository.DocumentRepository;
 import com.dashboardai.repository.AgentTelegramRepository;
 import com.dashboardai.repository.AgentWhatsAppRepository;
+import com.dashboardai.repository.VectorEmbeddingRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -41,6 +43,9 @@ public class DocumentService {
     private AgentWhatsAppRepository agentWhatsAppRepository;
     
     @Autowired
+    private VectorEmbeddingRepository vectorEmbeddingRepository;
+    
+    @Autowired
     private RestTemplate restTemplate;
     
     @Value("${app.n8n.webhook.documents:https://n8n.topias.app/webhook/documents-api}")
@@ -58,8 +63,8 @@ public class DocumentService {
         "application/csv"
     );
     
-    // Tamaño máximo: 10MB
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    // Tamaño máximo: 30MB
+    private static final long MAX_FILE_SIZE = 30 * 1024 * 1024;
     
     /**
      * Procesar documento enviándolo directamente a N8N para vectorización
@@ -219,7 +224,7 @@ public class DocumentService {
         }
         
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("El archivo excede el tamaño máximo de 10MB");
+            throw new IllegalArgumentException("El archivo excede el tamaño máximo de 30MB");
         }
         
         String contentType = file.getContentType();
@@ -390,12 +395,40 @@ public class DocumentService {
     }
     
     /**
-     * Eliminar documento
+     * Eliminar documento y sus vectores asociados
      */
+    @Transactional
     public void deleteDocument(UUID id) {
-        if (!documentRepository.existsById(id)) {
+        // Verificar que el documento existe
+        Optional<Document> documentOpt = documentRepository.findById(id);
+        if (documentOpt.isEmpty()) {
             throw new RuntimeException("Documento no encontrado");
         }
+        
+        Document document = documentOpt.get();
+        
+        // Si el documento tiene un agente asociado, eliminar los vectores
+        if (document.getAgentId() != null) {
+            try {
+                String agentIdStr = document.getAgentId().toString();
+                
+                // Contar cuántos vectores se van a eliminar
+                long vectorCount = vectorEmbeddingRepository.countByAgentIdInMetadata(agentIdStr);
+                logger.info("Found {} vectors for agentId: {}", vectorCount, agentIdStr);
+                
+                // Eliminar los vectores asociados
+                int deletedVectors = vectorEmbeddingRepository.deleteByAgentIdInMetadata(agentIdStr);
+                logger.info("Deleted {} vectors for agentId: {}", deletedVectors, agentIdStr);
+                
+            } catch (Exception e) {
+                logger.error("Error deleting vectors for document {}: {}", id, e.getMessage(), e);
+                // Continuamos con la eliminación del documento aunque falle la eliminación de vectores
+            }
+        } else {
+            logger.warn("Document {} has no agentId, skipping vector deletion", id);
+        }
+        
+        // Eliminar el documento
         documentRepository.deleteById(id);
         logger.info("Document deleted: {}", id);
     }

@@ -411,6 +411,34 @@ public class ConversationLogService {
     }
     
     /**
+     * Eliminar todos los logs de una sesión específica (conversación completa)
+     */
+    public void deleteConversationBySessionName(String sessionName) {
+        try {
+            logger.info("Attempting to delete all logs for session: {}", sessionName);
+            
+            // Verificar que existe la sesión
+            if (!conversationLogRepository.existsBySessionName(sessionName)) {
+                logger.warn("Session {} not found", sessionName);
+                throw new RuntimeException("Sesión de conversación no encontrada");
+            }
+            
+            // Contar mensajes antes de eliminar
+            Long messageCount = conversationLogRepository.countBySessionName(sessionName);
+            logger.info("Found {} messages for session {}", messageCount, sessionName);
+            
+            // Eliminar todos los logs de la sesión
+            conversationLogRepository.deleteBySessionName(sessionName);
+            
+            logger.info("Successfully deleted {} messages from session {}", messageCount, sessionName);
+            
+        } catch (Exception e) {
+            logger.error("Error deleting conversation session {}: {}", sessionName, e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar la conversación: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Obtener conversaciones agrupadas por sesión con información resumida
      */
     @Transactional(readOnly = true)
