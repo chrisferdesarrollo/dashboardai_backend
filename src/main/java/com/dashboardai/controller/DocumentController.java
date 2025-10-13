@@ -49,26 +49,21 @@ public class DocumentController {
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "tags", required = false) String[] tags,
             @RequestParam(value = "agentId", required = false) UUID agentId,
-            @RequestParam(value = "authToken", required = false) String authToken,
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "Authorization") String authHeader,
             Authentication authentication) {
         
         try {
-            logger.info("POST /api/documents/upload - Uploading document: {} ({})", 
-                       name, file.getOriginalFilename());
+            logger.info("POST /api/documents/upload - Uploading document: {} - Size: {} bytes", 
+                       name, file.getSize());
             
-            // Usar token del FormData si está disponible, sino usar del header
-            String finalToken = authToken;
-            if (finalToken == null || finalToken.isEmpty()) {
-                finalToken = authHeader;
+            // Validar tamaño del archivo
+            if (file.getSize() > 30 * 1024 * 1024) { // 30MB
+                logger.error("File size exceeds maximum: {} bytes", file.getSize());
+                return ResponseEntity.badRequest()
+                    .body(DocumentUploadResponse.error("El archivo excede el tamaño máximo de 30MB"));
             }
             
-            logger.info("Token source - FormData: {}, Header: {}", 
-                       authToken != null ? "Present" : "Missing",
-                       authHeader != null ? "Present" : "Missing");
-            logger.info("Using token from: {}", 
-                       authToken != null ? "FormData" : "Header");
-            logger.info("Authorization header received: {}", authHeader != null ? "Present" : "Missing");
+            logger.debug("Authorization header present: {}", authHeader != null && !authHeader.isEmpty());
             
             // Crear request con metadatos
             CreateDocumentRequest request = new CreateDocumentRequest();
@@ -81,7 +76,7 @@ public class DocumentController {
             Long userId = getCurrentUserId(authentication);
             
             // Procesar documento y enviarlo a N8N
-            DocumentResponse response = documentService.processDocumentForVectorization(file, request, finalToken, userId);
+            DocumentResponse response = documentService.processDocumentForVectorization(file, request, authHeader, userId);
             
             return ResponseEntity.ok(DocumentUploadResponse.success(response));
             
