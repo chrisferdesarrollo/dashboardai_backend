@@ -172,7 +172,7 @@ public class ConversationLogController {
             }
             
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
@@ -194,7 +194,7 @@ public class ConversationLogController {
             
             List<ConversationLog> logs = conversationLogService.getConversationLogsBySession(sessionName);
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
@@ -216,7 +216,7 @@ public class ConversationLogController {
             
             List<ConversationLog> logs = conversationLogService.getConversationLogsByUser(userName);
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
@@ -258,7 +258,7 @@ public class ConversationLogController {
             
             List<ConversationLog> logs = conversationLogService.getRecentConversationLogs();
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
@@ -290,7 +290,7 @@ public class ConversationLogController {
             }
             
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
@@ -312,7 +312,7 @@ public class ConversationLogController {
             
             List<ConversationLog> logs = conversationLogService.searchInUserMessages(searchText);
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
@@ -334,7 +334,7 @@ public class ConversationLogController {
             
             List<ConversationLog> logs = conversationLogService.searchInAiResponses(searchText);
             List<ConversationLogResponse> responses = logs.stream()
-                    .map(ConversationLogResponse::new)
+                    .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));

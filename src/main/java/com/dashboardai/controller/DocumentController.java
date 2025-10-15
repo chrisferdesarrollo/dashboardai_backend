@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -84,6 +85,56 @@ public class DocumentController {
             logger.error("Error uploading document: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                 .body(DocumentUploadResponse.error("Error al procesar el documento: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Subir archivo Excel específicamente
+     */
+    @PostMapping("/upload-excel")
+    public ResponseEntity<DocumentUploadResponse> uploadExcelDocument(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("name") String name,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "tags", required = false) String[] tags,
+            @RequestParam(value = "agentId", required = false) UUID agentId,
+            @RequestHeader(value = "Authorization", required = false) String authToken,
+            Authentication authentication) {
+        
+        try {
+            logger.info("POST /api/documents/upload-excel - Uploading Excel document: {} - Size: {} bytes", 
+                       name, file.getSize());
+            
+            // Validar que sea un archivo Excel
+            if (!isExcelFile(file)) {
+                return ResponseEntity.badRequest()
+                    .body(DocumentUploadResponse.error("El archivo debe ser de tipo Excel (.xls o .xlsx)"));
+            }
+            
+            // Límite de tamaño específico para Excel (puede ser mayor)
+            if (file.getSize() > 50 * 1024 * 1024) { // 50MB para Excel
+                return ResponseEntity.badRequest()
+                    .body(DocumentUploadResponse.error("El archivo Excel excede el tamaño máximo de 50MB"));
+            }
+            
+            Long userId = getCurrentUserId(authentication);
+            
+            CreateDocumentRequest request = new CreateDocumentRequest();
+            request.setName(name);
+            request.setDescription(description);
+            request.setTags(tags != null ? Arrays.asList(tags) : null);
+            request.setAgentId(agentId);
+            
+            DocumentResponse response = documentService.processDocumentForVectorization(file, request, authToken, userId);
+            
+            logger.info("Excel document uploaded successfully with ID: {}", response.getId());
+            
+            return ResponseEntity.ok(DocumentUploadResponse.success(response));
+            
+        } catch (Exception e) {
+            logger.error("Error uploading Excel document: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                .body(DocumentUploadResponse.error("Error al procesar el archivo Excel: " + e.getMessage()));
         }
     }
     
@@ -209,5 +260,31 @@ public class DocumentController {
             logger.error("Error marking document as processed: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
+    }
+    
+    /**
+     * Método auxiliar para verificar si un archivo es Excel
+     */
+    private boolean isExcelFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        String filename = file.getOriginalFilename();
+        
+        if (contentType != null) {
+            String lowerContentType = contentType.toLowerCase();
+            if (lowerContentType.equals("application/vnd.ms-excel") ||
+                lowerContentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") ||
+                lowerContentType.equals("application/excel") ||
+                lowerContentType.equals("application/x-excel") ||
+                lowerContentType.equals("application/x-msexcel")) {
+                return true;
+            }
+        }
+        
+        if (filename != null) {
+            String lowerFilename = filename.toLowerCase();
+            return lowerFilename.endsWith(".xls") || lowerFilename.endsWith(".xlsx");
+        }
+        
+        return false;
     }
 }

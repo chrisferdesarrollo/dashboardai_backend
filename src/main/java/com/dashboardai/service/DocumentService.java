@@ -24,7 +24,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -46,6 +45,9 @@ public class DocumentService {
     private VectorEmbeddingRepository vectorEmbeddingRepository;
     
     @Autowired
+    private ExcelProcessingService excelProcessingService;
+    
+    @Autowired
     private RestTemplate restTemplate;
     
     @Value("${app.n8n.webhook.documents:https://n8n.topias.app/webhook/documents-api}")
@@ -60,7 +62,13 @@ public class DocumentService {
         "text/plain",
         "text/markdown",
         "text/csv",
-        "application/csv"
+        "application/csv",
+        // Agregar soporte para Excel
+        "application/vnd.ms-excel", // .xls
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+        "application/excel",
+        "application/x-excel",
+        "application/x-msexcel"
     );
     
     // Tamaño máximo: 30MB
@@ -148,6 +156,26 @@ public class DocumentService {
             metadata.put("tags", String.join(",", document.getTags()));
         }
         metadata.put("fileName", file.getOriginalFilename());
+        
+        // Procesar archivos Excel para extraer contenido de texto
+        if (isExcelFile(file)) {
+            try {
+                logger.info("Processing Excel file for text extraction: {}", file.getOriginalFilename());
+                String extractedText = excelProcessingService.processExcelFile(file);
+                metadata.put("extractedText", extractedText);
+                metadata.put("isExcelProcessed", true);
+                
+                // Obtener estadísticas del Excel
+                Map<String, Object> excelStats = excelProcessingService.getExcelStats(file);
+                metadata.put("excelStats", excelStats);
+                
+                logger.info("Excel text extraction completed. Text length: {} characters", extractedText.length());
+            } catch (Exception e) {
+                logger.error("Error processing Excel file: {}", e.getMessage(), e);
+                metadata.put("excelProcessingError", e.getMessage());
+                metadata.put("isExcelProcessed", false);
+            }
+        }
         
         // Obtener session_name del agente si está disponible
         if (document.getAgentId() != null) {
@@ -579,5 +607,31 @@ public class DocumentService {
         }
         
         return "unknown";
+    }
+    
+    /**
+     * Determina si un archivo es de tipo Excel
+     */
+    private boolean isExcelFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        String filename = file.getOriginalFilename();
+        
+        if (contentType != null) {
+            String lowerContentType = contentType.toLowerCase();
+            if (lowerContentType.equals("application/vnd.ms-excel") ||
+                lowerContentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") ||
+                lowerContentType.equals("application/excel") ||
+                lowerContentType.equals("application/x-excel") ||
+                lowerContentType.equals("application/x-msexcel")) {
+                return true;
+            }
+        }
+        
+        if (filename != null) {
+            String lowerFilename = filename.toLowerCase();
+            return lowerFilename.endsWith(".xls") || lowerFilename.endsWith(".xlsx");
+        }
+        
+        return false;
     }
 }
