@@ -263,29 +263,27 @@ public class ConversationLogService {
     }
     
     /**
-     * Obtener logs recientes para notificaciones (últimas 2 horas)
+     * Obtener nuevos mensajes para notificaciones del usuario
+     * Solo incluye mensajes de agentes que pertenecen al usuario autenticado
      */
     @Transactional(readOnly = true)
-    public List<ConversationLog> getRecentConversationLogsForNotifications() {
+    public List<ConversationLog> getNewMessagesForUser(Long userId, ZonedDateTime since) {
         try {
-            ZonedDateTime since = ZonedDateTime.now().minusHours(2);
-            return conversationLogRepository.findRecentLogs(since);
+            logger.info("Fetching new messages for user {} since {}", userId, since);
+            List<ConversationLog> results = conversationLogRepository.findNewMessagesForUser(userId, since);
+            logger.info("Query returned {} results for user {}", results.size(), userId);
+            
+            // Log some details about the results
+            for (ConversationLog log : results) {
+                logger.info("Found message: id={}, session={}, agentId={}, userMessage={}", 
+                           log.getId(), log.getSessionName(), log.getAgentId(), 
+                           log.getUserMessage() != null ? log.getUserMessage().substring(0, Math.min(50, log.getUserMessage().length())) : "null");
+            }
+            
+            return results;
         } catch (Exception e) {
-            logger.error("Error fetching recent conversation logs for notifications: {}", e.getMessage(), e);
-            throw new RuntimeException("Error al obtener los logs recientes para notificaciones");
-        }
-    }
-    
-    /**
-     * Obtener logs desde un timestamp específico
-     */
-    @Transactional(readOnly = true)
-    public List<ConversationLog> getConversationLogsSince(ZonedDateTime since) {
-        try {
-            return conversationLogRepository.findRecentLogs(since);
-        } catch (Exception e) {
-            logger.error("Error fetching conversation logs since {}: {}", since, e.getMessage(), e);
-            throw new RuntimeException("Error al obtener los logs desde el timestamp especificado");
+            logger.error("Error fetching new messages for user {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener nuevos mensajes para notificaciones");
         }
     }
     

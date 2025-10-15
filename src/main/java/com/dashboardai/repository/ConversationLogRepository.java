@@ -37,6 +37,22 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
     @Query("SELECT cl FROM ConversationLog cl WHERE cl.createdAt >= :since ORDER BY cl.createdAt DESC")
     List<ConversationLog> findRecentLogs(@Param("since") ZonedDateTime since);
     
+    // Obtener logs recientes filtrados por agentes del usuario
+    @Query("SELECT cl FROM ConversationLog cl " +
+           "WHERE cl.createdAt >= :since " +
+           "AND (cl.agentId IN (SELECT aw.id FROM AgentWhatsApp aw WHERE aw.user.id = :userId) " +
+           "     OR cl.agentId IN (SELECT at.id FROM AgentTelegram at WHERE at.user.id = :userId)) " +
+           "ORDER BY cl.createdAt DESC")
+    List<ConversationLog> findRecentLogsByUser(@Param("since") ZonedDateTime since, @Param("userId") Long userId);
+    
+    // Obtener logs desde timestamp específico filtrados por agentes del usuario  
+    @Query("SELECT cl FROM ConversationLog cl " +
+           "WHERE cl.createdAt >= :since " +
+           "AND (cl.agentId IN (SELECT aw.id FROM AgentWhatsApp aw WHERE aw.user.id = :userId) " +
+           "     OR cl.agentId IN (SELECT at.id FROM AgentTelegram at WHERE at.user.id = :userId)) " +
+           "ORDER BY cl.createdAt DESC")
+    List<ConversationLog> findLogsSinceByUser(@Param("since") ZonedDateTime since, @Param("userId") Long userId);
+    
     // Contar mensajes por sesión
     @Query("SELECT COUNT(cl) FROM ConversationLog cl WHERE cl.sessionName = :sessionName")
     Long countBySessionName(@Param("sessionName") String sessionName);
@@ -111,4 +127,33 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
     // Eliminar todos los logs de una sesión específica
     @Transactional
     void deleteBySessionName(String sessionName);
+    
+    /**
+     * Buscar nuevos mensajes para notificaciones del usuario específico
+     * Solo mensajes de agentes que pertenecen al usuario autenticado
+     * Busca por sessionName ya que los logs pueden no tener agentId
+     */
+    @Query("""
+        SELECT cl FROM ConversationLog cl 
+        WHERE cl.timestamp >= :since 
+        AND (
+            (cl.sessionName IN (
+                SELECT aw.sessionName FROM AgentWhatsApp aw WHERE aw.user.id = :userId
+            )) 
+            OR 
+            (cl.sessionName IN (
+                SELECT at.sessionName FROM AgentTelegram at WHERE at.user.id = :userId
+            ))
+            OR
+            (cl.agentId IN (
+                SELECT aw.id FROM AgentWhatsApp aw WHERE aw.user.id = :userId
+            )) 
+            OR 
+            (cl.agentId IN (
+                SELECT at.id FROM AgentTelegram at WHERE at.user.id = :userId
+            ))
+        )
+        ORDER BY cl.timestamp DESC
+        """)
+    List<ConversationLog> findNewMessagesForUser(@Param("userId") Long userId, @Param("since") ZonedDateTime since);
 }

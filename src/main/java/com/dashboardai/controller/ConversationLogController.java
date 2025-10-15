@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -271,32 +272,39 @@ public class ConversationLogController {
     }
     
     /**
-     * Obtener logs recientes para notificaciones (con filtro de timestamp opcional)
+     * Obtener notificaciones de nuevos mensajes para el usuario autenticado
+     * Solo incluye mensajes de agentes que pertenecen al usuario
      */
-    @GetMapping("/recent-for-notifications")
-    public ResponseEntity<?> getRecentConversationLogsForNotifications(
-            @RequestParam(required = false) String since) {
+    @GetMapping("/notifications")
+    public ResponseEntity<?> getNotifications(
+            @RequestParam(required = false) String since,
+            Authentication authentication) {
         try {
-            logger.info("GET /api/conversation-logs/recent-for-notifications - Since: {}", since);
+            Long userId = getCurrentUserId(authentication);
+            logger.info("GET /api/conversation-logs/notifications - Since: {}, UserId: {}", since, userId);
             
-            List<ConversationLog> logs;
+            // Obtener mensajes nuevos desde el timestamp dado o últimos 5 minutos
+            ZonedDateTime sinceTimestamp;
             if (since != null && !since.isEmpty()) {
-                // Parsear el timestamp desde el parámetro
-                ZonedDateTime sinceTimestamp = ZonedDateTime.parse(since);
-                logs = conversationLogService.getConversationLogsSince(sinceTimestamp);
+                sinceTimestamp = ZonedDateTime.parse(since);
             } else {
-                // Si no hay timestamp, obtener logs de las últimas 2 horas
-                logs = conversationLogService.getRecentConversationLogsForNotifications();
+                sinceTimestamp = ZonedDateTime.now().minusMinutes(5);
             }
             
-            List<ConversationLogResponse> responses = logs.stream()
+            logger.info("Looking for messages since: {} for user: {}", sinceTimestamp, userId);
+            
+            List<ConversationLog> newMessages = conversationLogService.getNewMessagesForUser(userId, sinceTimestamp);
+            
+            logger.info("Found {} new messages for user {}", newMessages.size(), userId);
+            
+            List<ConversationLogResponse> responses = newMessages.stream()
                     .map(log -> new ConversationLogResponse(log))
                     .collect(Collectors.toList());
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
             
         } catch (Exception e) {
-            logger.error("Error fetching recent conversation logs for notifications: {}", e.getMessage(), e);
+            logger.error("Error fetching notifications: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(new GetConversationLogsResponseWrapper(false, null, e.getMessage()));
         }
@@ -499,6 +507,48 @@ public class ConversationLogController {
         }
     }
     
+    /**
+     * Obtener mensajes nuevos para notificaciones
+     */
+    @GetMapping("/new-messages")
+    public ResponseEntity<List<ConversationLogResponse>> getNewMessagesForNotifications(
+            @RequestParam(value = "minutes", required = false) String minutesParam,
+            Authentication authentication) {
+        
+        try {
+            Long userId = getCurrentUserId(authentication);
+            
+            // Parse minutes parameter with default value
+            Integer minutes = 5; // default
+            if (minutesParam != null && !minutesParam.trim().isEmpty()) {
+                try {
+                    minutes = Integer.parseInt(minutesParam.trim());
+                } catch (NumberFormatException e) {
+                    logger.warn("Invalid minutes parameter: {}, using default: 5", minutesParam);
+                    minutes = 5;
+                }
+            }
+            
+            // Convertir minutos a ZonedDateTime
+            ZonedDateTime since = ZonedDateTime.now().minusMinutes(minutes);
+            
+            logger.info("GET /new-messages - Getting new messages for user: {} since: {}", userId, since);
+            
+            List<ConversationLog> newMessages = conversationLogService.getNewMessagesForUser(userId, since);
+            List<ConversationLogResponse> responses = newMessages.stream()
+                    .map(log -> new ConversationLogResponse(log))
+                    .collect(Collectors.toList());
+            
+            logger.info("Found {} new messages for user: {}", responses.size(), userId);
+            
+            return ResponseEntity.ok(responses);
+            
+        } catch (Exception e) {
+            logger.error("Error getting new messages for notifications: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     // Response Wrapper Classes
     public static class CreateConversationLogResponseWrapper {
         private boolean success;
