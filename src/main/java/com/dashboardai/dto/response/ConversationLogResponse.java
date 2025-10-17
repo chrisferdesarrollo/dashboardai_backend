@@ -16,6 +16,9 @@ public class ConversationLogResponse {
     private String platform;
     private ZonedDateTime timestamp;
     private ZonedDateTime createdAt;
+    private Long userId;
+    private UUID agentId;
+    private String agentName;
     
     // Constructors
     public ConversationLogResponse() {}
@@ -30,6 +33,8 @@ public class ConversationLogResponse {
         this.platform = conversationLog.getPlatform();
         this.timestamp = conversationLog.getTimestamp();
         this.createdAt = conversationLog.getCreatedAt();
+        this.userId = conversationLog.getUserId();
+        this.agentId = conversationLog.getAgentId();
     }
     
     // Getters and Setters
@@ -105,6 +110,30 @@ public class ConversationLogResponse {
         this.createdAt = createdAt;
     }
     
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public UUID getAgentId() {
+        return agentId;
+    }
+    
+    public void setAgentId(UUID agentId) {
+        this.agentId = agentId;
+    }
+    
+    public String getAgentName() {
+        return agentName;
+    }
+    
+    public void setAgentName(String agentName) {
+        this.agentName = agentName;
+    }
+    
     @Override
     public String toString() {
         return "ConversationLogResponse{" +
@@ -114,8 +143,12 @@ public class ConversationLogResponse {
                 ", aiResponse='" + aiResponse + '\'' +
                 ", userName='" + userName + '\'' +
                 ", userPhone='" + userPhone + '\'' +
+                ", platform='" + platform + '\'' +
                 ", timestamp=" + timestamp +
                 ", createdAt=" + createdAt +
+                ", userId=" + userId +
+                ", agentId=" + agentId +
+                ", agentName='" + agentName + '\'' +
                 '}';
     }
 }

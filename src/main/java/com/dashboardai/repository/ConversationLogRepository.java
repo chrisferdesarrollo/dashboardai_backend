@@ -132,28 +132,20 @@ public interface ConversationLogRepository extends JpaRepository<ConversationLog
      * Buscar nuevos mensajes para notificaciones del usuario específico
      * Solo mensajes de agentes que pertenecen al usuario autenticado
      * Busca por sessionName ya que los logs pueden no tener agentId
+     * Retorna un Object[] con: [ConversationLog, agentName (String)]
      */
     @Query("""
-        SELECT cl FROM ConversationLog cl 
+        SELECT cl, 
+               COALESCE(aw.name, at.name, 'Agente') as agentName
+        FROM ConversationLog cl 
+        LEFT JOIN AgentWhatsApp aw ON (cl.agentId = aw.id OR cl.sessionName = aw.sessionName)
+        LEFT JOIN AgentTelegram at ON (cl.agentId = at.id OR cl.sessionName = at.sessionName)
         WHERE cl.timestamp >= :since 
         AND (
-            (cl.sessionName IN (
-                SELECT aw.sessionName FROM AgentWhatsApp aw WHERE aw.user.id = :userId
-            )) 
-            OR 
-            (cl.sessionName IN (
-                SELECT at.sessionName FROM AgentTelegram at WHERE at.user.id = :userId
-            ))
-            OR
-            (cl.agentId IN (
-                SELECT aw.id FROM AgentWhatsApp aw WHERE aw.user.id = :userId
-            )) 
-            OR 
-            (cl.agentId IN (
-                SELECT at.id FROM AgentTelegram at WHERE at.user.id = :userId
-            ))
+            (aw.id IS NOT NULL AND aw.user.id = :userId) OR
+            (at.id IS NOT NULL AND at.user.id = :userId)
         )
         ORDER BY cl.timestamp DESC
         """)
-    List<ConversationLog> findNewMessagesForUser(@Param("userId") Long userId, @Param("since") ZonedDateTime since);
+    List<Object[]> findNewMessagesForUserWithAgentName(@Param("userId") Long userId, @Param("since") ZonedDateTime since);
 }

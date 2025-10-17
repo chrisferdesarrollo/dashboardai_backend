@@ -293,13 +293,10 @@ public class ConversationLogController {
             
             logger.info("Looking for messages since: {} for user: {}", sinceTimestamp, userId);
             
-            List<ConversationLog> newMessages = conversationLogService.getNewMessagesForUser(userId, sinceTimestamp);
+            // El servicio ahora retorna ConversationLogResponse directamente con el nombre del agente
+            List<ConversationLogResponse> responses = conversationLogService.getNewMessagesForUser(userId, sinceTimestamp);
             
-            logger.info("Found {} new messages for user {}", newMessages.size(), userId);
-            
-            List<ConversationLogResponse> responses = newMessages.stream()
-                    .map(log -> new ConversationLogResponse(log))
-                    .collect(Collectors.toList());
+            logger.info("Found {} new messages for user {}", responses.size(), userId);
             
             return ResponseEntity.ok(new GetConversationLogsResponseWrapper(true, responses, null));
             
@@ -534,10 +531,8 @@ public class ConversationLogController {
             
             logger.info("GET /new-messages - Getting new messages for user: {} since: {}", userId, since);
             
-            List<ConversationLog> newMessages = conversationLogService.getNewMessagesForUser(userId, since);
-            List<ConversationLogResponse> responses = newMessages.stream()
-                    .map(log -> new ConversationLogResponse(log))
-                    .collect(Collectors.toList());
+            // El servicio ahora retorna ConversationLogResponse directamente
+            List<ConversationLogResponse> responses = conversationLogService.getNewMessagesForUser(userId, since);
             
             logger.info("Found {} new messages for user: {}", responses.size(), userId);
             

@@ -1,6 +1,7 @@
 package com.dashboardai.service;
 
 import com.dashboardai.dto.response.ConversationSessionStatsResponse;
+import com.dashboardai.dto.response.ConversationLogResponse;
 import com.dashboardai.entity.ConversationLog;
 import com.dashboardai.repository.ConversationLogRepository;
 import org.slf4j.Logger;
@@ -265,22 +266,31 @@ public class ConversationLogService {
     /**
      * Obtener nuevos mensajes para notificaciones del usuario
      * Solo incluye mensajes de agentes que pertenecen al usuario autenticado
+     * Ahora retorna ConversationLogResponse que incluye el nombre del agente
      */
     @Transactional(readOnly = true)
-    public List<ConversationLog> getNewMessagesForUser(Long userId, ZonedDateTime since) {
+    public List<ConversationLogResponse> getNewMessagesForUser(Long userId, ZonedDateTime since) {
         try {
             logger.info("Fetching new messages for user {} since {}", userId, since);
-            List<ConversationLog> results = conversationLogRepository.findNewMessagesForUser(userId, since);
+            List<Object[]> results = conversationLogRepository.findNewMessagesForUserWithAgentName(userId, since);
             logger.info("Query returned {} results for user {}", results.size(), userId);
             
-            // Log some details about the results
-            for (ConversationLog log : results) {
-                logger.info("Found message: id={}, session={}, agentId={}, userMessage={}", 
-                           log.getId(), log.getSessionName(), log.getAgentId(), 
-                           log.getUserMessage() != null ? log.getUserMessage().substring(0, Math.min(50, log.getUserMessage().length())) : "null");
-            }
-            
-            return results;
+            // Convertir Object[] a ConversationLogResponse
+            return results.stream()
+                    .map(result -> {
+                        ConversationLog log = (ConversationLog) result[0];
+                        String agentName = (String) result[1];
+                        
+                        ConversationLogResponse response = new ConversationLogResponse(log);
+                        response.setAgentName(agentName);
+                        
+                        logger.info("Found message: id={}, session={}, agentId={}, agentName={}, userMessage={}", 
+                                   log.getId(), log.getSessionName(), log.getAgentId(), agentName,
+                                   log.getUserMessage() != null ? log.getUserMessage().substring(0, Math.min(50, log.getUserMessage().length())) : "null");
+                        
+                        return response;
+                    })
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             logger.error("Error fetching new messages for user {}: {}", userId, e.getMessage(), e);
             throw new RuntimeException("Error al obtener nuevos mensajes para notificaciones");
