@@ -203,4 +203,38 @@ public class AuthController {
             ));
         }
     }
+
+    @PostMapping("/demo")
+    public ResponseEntity<?> demoLogin() {
+        System.out.println("🔵 AuthController: Demo login request recibido");
+        
+        try {
+            // Autenticar al usuario demo usando el sistema de autenticación normal
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken("demo", "demo123"));
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            List<String> roles = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .collect(Collectors.toList());
+
+            System.out.println("✅ AuthController: Demo login exitoso para usuario: " + userDetails.getUsername());
+            
+            return ResponseEntity.ok(new JwtResponse(
+                jwt,
+                userDetails.getId(),
+                userDetails.getUsername(),
+                userDetails.getEmail(),
+                roles
+            ));
+        } catch (Exception e) {
+            System.err.println("❌ AuthController: Error en demo login: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new MessageResponse("Error al generar sesión demo: " + e.getMessage()));
+        }
+    }
 }
